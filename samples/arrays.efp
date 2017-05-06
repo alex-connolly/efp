@@ -1,0 +1,8 @@
+alias data = "a-zA-Z"
+
+arrays {
+    one : [2:data]
+    two : [data:2]
+    three : [2:data:2]
+    four : [data]
+}

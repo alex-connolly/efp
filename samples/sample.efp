@@ -1,0 +1,11 @@
+alias STR = string
+
+alias hi = here {
+    ffa = STR
+    hi
+}
+
+element {
+    field = int
+    hi
+}

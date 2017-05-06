@@ -1,0 +1,9 @@
+alias x = "a-z"
+
+outer {
+    field = x
+    inner {
+        alias x = "A-Z"
+        field = x
+    }
+}
