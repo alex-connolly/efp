@@ -91,6 +91,8 @@ func parseElement(p *parser) {
 func parseFieldAlias(p *parser) {
 	f := new(field)
 	p.next() // eat "alias"
+	f.alias = p.lexer.tokenString(p.next())
+	p.next() // eat "="
 	f.key = p.lexer.tokenString(p.next())
 	p.next() // eat "="
 	p.parseFieldValue(f)
@@ -100,6 +102,8 @@ func parseFieldAlias(p *parser) {
 func parseElementAlias(p *parser) {
 	e := new(element)
 	p.next() // eat "alias"
+	e.alias = p.lexer.tokenString(p.next())
+	p.next() // eat "="
 	e.key = p.lexer.tokenString(p.next())
 	p.parsePrototypeParameters(e)
 	p.addElementAlias(e)
@@ -125,7 +129,28 @@ func (p *parser) parsePrototypeParameters(e *element) {
 	if p.current().tkntype != tknOpenBracket {
 		return
 	}
-	p.addPrototypeParameter()
+	p.next() // eat "("
+	for p.current().tkntype != tknCloseBracket {
+		switch p.current().tkntype {
+		case tknComma:
+			p.next()
+			break
+		case tknValue:
+			p.parsePrototypeParameter()
+			break
+		}
+	}
+	p.next() // eat ")"
+}
+
+func (p *parser) parsePrototypeParameter() {
+	if p.prototype.parameters == nil {
+		p.prototype.parameters = make([]*fieldValue)
+	}
+	fv := new(fieldValue)
+
+	p.prototype.parameters = append(p.prototype.parameters)
+
 }
 
 func (p *parser) addPrototypeElement(e *element) {
@@ -256,55 +281,6 @@ func isPrototypeElementClosure(p *parser) bool {
 	return p.peek(p.index).tkntype == tknCloseBrace
 }
 
-func parsePrototypeField(p *parser) {
-	f := new(field)
-	f.key = p.lexer.tokenString(p.next())
-	p.next() // eat :
-	switch p.next().tkntype {
-	case tknOpenSquare:
-		p.parsePrototypeArray(f)
-		break
-	default:
-		p.parsePrototypeFieldValue(f)
-		break
-	}
-	p.addPrototypeField(f)
-}
-
-func (p *parser) parsePrototypeFieldValue(f *field) {
-	switch p.current().tkntype {
-	case tknValue:
-		p.addValue(f)
-		break
-	case tknOpenSquare:
-		p.addArrayValue(f)
-		break
-	default:
-		break
-	}
-	switch p.current().tkntype {
-	case tknOr:
-		p.next()
-		p.parsePrototypeFieldValue(f)
-	}
-}
-
-func (p *parser) parsePrototypeArray(f *field) {
-	switch p.current().tkntype {
-	case tknNumber:
-		f.min = atoi(p.lexer.tokenString(p.next()))
-		break
-	case tknValue:
-
-		switch p.current() {
-		case tknNumber:
-			f.max = atoi(p.lexer.tokenString(p.next()))
-		}
-		break
-	}
-	p.next() // eat final ']'
-}
-
 func parsePrototypeFieldAlias(p *parser) {
 	f := new(field)
 	p.next() // eat the alias keyword
@@ -336,63 +312,33 @@ func (p *parser) current() token {
 }
 
 func (p *parser) next() token {
-	t := p.lexer.tokens[p.index]
+	t := p.current()
 	p.index++
 	return t
 }
 
-func (p *parser) parseParameters() []string {
-	var params []string
+func (p *parser) parseParameters() {
+	// handle case where no parameters
+	if p.current().tkntype != tknOpenBrace {
+		return
+	}
+	p.next() // eat "("
 	for p.current().tkntype != tknCloseBracket {
-		params = append(params, p.lexer.tokenString(p.next()))
+		if p.scope.parameters == nil {
+			p.scope.parameters = make([]string, 0)
+		}
+		p.scope.parameters = append(p.scope.parameters, p.lexer.tokenString(p.next()))
 	}
-	if len(params) == 0 {
-		return nil
-	}
-	return params
-}
-
-func parsePrototypeElementAlias(p *parser) {
-	e := new(element)
-	e.key = p.lexer.tokenString(p.next())
-	switch p.next().tkntype {
-	case tknOpenBrace:
-		break
-	case tknOpenBracket:
-		e.parameters = p.parseParameters()
-		p.next() // eat {
-		break
-	}
-	p.addPrototypeElement(e)
-}
-
-func parsePrototypeElement(p *parser) {
-	e := new(element)
-	e.key = p.lexer.tokenString(p.next())
-	switch p.next().tkntype {
-	case tknOpenBrace:
-		break
-	case tknOpenBracket:
-		p.parseParameters()
-		p.next() // eat {
-		break
-	}
-	p.addPrototypeElement(e)
-}
-
-func parsePrototypeElementClosure(p *parser) {
-	p.scope = p.scope.parent
-	p.prototype = p.prototype.parent
-	p.index++
+	p.next() // eat ")"'
 }
 
 func (p *parser) importPrototypeConstructs() {
 	p.constructs = []construct{
-		construct{"prototype field", isPrototypeFieldAlias, parsePrototypeFieldAlias},
-		construct{"prototype element", isPrototypeElementAlias, parsePrototypeElementAlias},
+		construct{"prototype field", isFieldAlias, parseFieldAlias},
+		construct{"prototype element", isElementAlias, parseElementAlias},
 		construct{"prototype field", isPrototypeField, parsePrototypeField},
 		construct{"prototype element", isPrototypeElement, parsePrototypeElement},
-		construct{"prototype element closure", isPrototypeElementClosure, parsePrototypeElementClosure},
+		construct{"element closure", isElementClosure, parseElementClosure},
 	}
 }
 

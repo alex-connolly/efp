@@ -1,3 +1,8 @@
+[![Build Status](https://travis-ci.org/boennemann/badges.svg?branch=master)](https://travis-ci.org/boennemann/badges)
+[![GitHub version](https://badge.fury.io/gh/boennemann%2Fbadges.svg)](http://badge.fury.io/gh/boennemann%2Fbadges)
+
+# Element Field Parser
+
 The element-field parser is a method of generating file validation parsers with a clean and consistent syntax.
 
 ## Basic Concepts
@@ -21,6 +26,8 @@ key("25", 25, "25"){
 
 }
 ```
+
+Of course, the use of parameters provides no significant practical benefit - it is merely a different stylistic choice, and can help to emphasise particular fields over others.
 
 ## Fields
 
@@ -69,13 +76,13 @@ Types may be in one or more of the following formats:
 
 There are several default types in the ```efp``` spec:
 
-```go
-id = "[a-zA-Z_]+"
-string = "\"[^()]\""
-float = "[0-9]*.[0-9]+"
-bool = "true|false"
-int = "[0-9]+"
-```
+| Alias     | Regex         |
+| :-------------: |:-------------:|
+| id | [a-zA-Z_]+ |
+| string | "\"[^()]\"" |
+| float | [0-9]*.[0-9]+    |
+| bool | true|false    |
+| int | [0-9]+    |
 
 ## Regex
 
@@ -123,4 +130,5 @@ alias hello = hello {
 | :-------------: |:-------------:|
 | Alias Not Found | The alias is not visible in the current scope. |
 | Duplicate Element |    |
+| Duplicate Field |     |
 | Duplicate Field |     |
