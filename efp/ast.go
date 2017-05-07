@@ -2,9 +2,15 @@ package efp
 
 type field struct {
 	key   string
-	value []string
-	min   int
-	max   int
+	value []*fieldValue
+}
+
+type fieldValue struct {
+	isArray bool
+	regex   string
+	values  []*fieldValue
+	min     int
+	max     int
 }
 
 type element struct {

@@ -50,6 +50,16 @@ func TestPrototypeFieldBasicDisjunction(t *testing.T) {
 	}
 }
 
+func TestPrototypeFieldComplexDisjunction(t *testing.T) {
+	p := basicParser(`name : string|"a-zA-Z"|["[abc]{5}":2]`)
+	if !isPrototypeField(p) {
+		t.Fail()
+	}
+	if p.prototype.fields["name"][0].value[1] != "int" {
+
+	}
+}
+
 func TestPrototypeFieldAliased(t *testing.T) {
 
 }

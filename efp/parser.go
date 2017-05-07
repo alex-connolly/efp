@@ -54,22 +54,22 @@ type construct struct {
 	process func(*parser)
 }
 
-func (p *parser) token(index int) token {
+func (p *parser) peek(index int) token {
 	return p.lexer.tokens[index]
 }
 
 func isField(p *parser) bool {
-	return p.token(p.index).tkntype == tknValue &&
-		p.token(p.index+1).tkntype == tknAssign
+	return p.peek(p.index).tkntype == tknValue &&
+		p.peek(p.index+1).tkntype == tknAssign
 }
 
 func isElement(p *parser) bool {
-	return p.token(p.index).tkntype == tknValue &&
-		p.token(p.index+1).tkntype == tknOpenBrace
+	return p.peek(p.index).tkntype == tknValue &&
+		p.peek(p.index+1).tkntype == tknOpenBrace
 }
 
 func isElementClosure(p *parser) bool {
-	return p.token(p.index).tkntype == tknCloseBrace
+	return p.peek(p.index).tkntype == tknCloseBrace
 }
 
 func parseField(p *parser) {
@@ -77,12 +77,12 @@ func parseField(p *parser) {
 	key := p.lexer.tokenString(p.next())
 	f.key = key
 	p.next() // eat =
-	switch p.next().tkntype {
+	switch p.current().tkntype {
 	case tknOpenSquare:
-		p.parseFieldArray()
+		p.parseFieldArray(f)
 		break
 	case tknValue:
-		p.parseFieldValue()
+		p.parseFieldValue(f)
 		break
 	}
 	p.addField(f)
@@ -92,20 +92,29 @@ func (p *parser) addField(f *field) {
 	if p.scope.fields[f.key] == nil {
 		p.scope.fields[f.key] = append(p.scope.fields[f.key], f)
 	} else {
-		p.errors = append(p.errors, fmt.Sprintf("Duplicate field %s in prototype (max %d)", key, 1))
+		p.errors = append(p.errors, fmt.Sprintf("Duplicate field %s in prototype (max %d)", f.key, 1))
 	}
 }
 
-func (p *parser) parseFieldValue() {
-	// parse field value
-	f.value = make([]string, 1)
-	f.value[0] = p.lexer.tokenString(p.lexer.tokens[p.index])
+func (p *parser) parseFieldValue(f *field) {
+	// first token guaranteed to be a VALUE
+	if f.value == nil {
+		f.value = make([]*fieldValue, 0)
+	}
+	fv := new(fieldValue)
+	fv.regex = p.lexer.tokenString(p.next())
+	f.value = append(f.value, fv)
+	switch p.current().tkntype {
+	case tknOr:
+		p.parseFieldValue(f)
+		break
+	}
 }
 
-func (p *parser) parseFieldArray() {
+func (p *parser) parseFieldArray(f *field) {
 	// parse field array
-	for p.current() != tknCloseSquare {
-		switch p.next() {
+	for p.current().tkntype != tknCloseSquare {
+		switch p.next().tkntype {
 		case tknComma:
 			p.next()
 			break
@@ -137,28 +146,28 @@ func (p *parser) importParseConstructs() {
 }
 
 func isPrototypeFieldAlias(p *parser) bool {
-	return p.lexer.tokenString(p.token(p.index)) == "alias" &&
-		p.token(p.index+2).tkntype == tknAssign
+	return p.lexer.tokenString(p.peek(p.index)) == "alias" &&
+		p.peek(p.index+2).tkntype == tknAssign
 }
 
 func isPrototypeElementAlias(p *parser) bool {
-	return p.lexer.tokenString(p.token(p.index)) == "alias" &&
-		p.token(p.index+2).tkntype == tknOpenBrace
+	return p.lexer.tokenString(p.peek(p.index)) == "alias" &&
+		p.peek(p.index+2).tkntype == tknOpenBrace
 }
 
 func isPrototypeField(p *parser) bool {
 	if len(p.lexer.tokens)-p.index < 2 {
 		return false
 	}
-	return p.token(p.index+1).tkntype == tknColon
+	return p.peek(p.index+1).tkntype == tknColon
 }
 
 func isPrototypeElement(p *parser) bool {
-	return p.token(p.index+1).tkntype == tknOpenBrace
+	return p.peek(p.index+1).tkntype == tknOpenBrace
 }
 
 func isPrototypeElementClosure(p *parser) bool {
-	return p.token(p.index).tkntype == tknCloseBrace
+	return p.peek(p.index).tkntype == tknCloseBrace
 }
 
 func parsePrototypeField(p *parser) {
@@ -167,7 +176,7 @@ func parsePrototypeField(p *parser) {
 	p.next() // eat :
 	switch p.next().tkntype {
 	case tknOpenSquare:
-		p.parsePrototypeArray()
+		p.parsePrototypeArray(f)
 		break
 	default:
 		p.parsePrototypeFieldValue(f)
@@ -177,24 +186,37 @@ func parsePrototypeField(p *parser) {
 }
 
 func (p *parser) parsePrototypeFieldValue(f *field) {
-	f.value = []string{p.lexer.tokenString(p.next())}
+	switch p.current().tkntype {
+	case tknValue:
+		p.addValue(f)
+		break
+	case tknOpenSquare:
+		p.addArrayValue(f)
+		break
+	default:
+		break
+	}
+	switch p.current().tkntype {
+	case tknOr:
+		p.next()
+		p.parsePrototypeFieldValue(f)
+	}
 }
 
-func (p *parser) parsePrototypeArray() {
-	for p.lexer.tokens[p.index].tkntype != tknCloseSquare {
-		if p.lexer.tokens[p.index].tkntype == tknComma {
-			p.index++
+func (p *parser) parsePrototypeArray(f *field) {
+	switch p.current().tkntype {
+	case tknNumber:
+		f.min = atoi(p.lexer.tokenString(p.next()))
+		break
+	case tknValue:
+
+		switch p.current() {
+		case tknNumber:
+			f.max = atoi(p.lexer.tokenString(p.next()))
 		}
-		if p.lexer.tokens[p.index].tkntype != tknValue {
-			//TODO: invalid token
-		}
-		if f.value == nil {
-			f.value = make([]string, 1)
-		}
-		f.value = append(f.value, p.lexer.tokenString(p.lexer.tokens[p.index]))
-		p.index++
+		break
 	}
-	p.index++ // eat final ']'
+	p.next() // eat final ']'
 }
 
 func (p *parser) addPrototypeField(f *field) {
