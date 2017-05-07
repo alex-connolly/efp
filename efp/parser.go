@@ -74,18 +74,108 @@ func isElementClosure(p *parser) bool {
 
 func parseField(p *parser) {
 	f := new(field)
-	key := p.lexer.tokenString(p.next())
-	f.key = key
+	f.key = p.lexer.tokenString(p.next())
 	p.next() // eat =
-	switch p.current().tkntype {
-	case tknOpenSquare:
-		p.parseFieldArray(f)
-		break
-	case tknValue:
-		p.parseFieldValue(f)
-		break
-	}
+	p.parseFieldValue(f)
 	p.addField(f)
+}
+
+func parseElement(p *parser) {
+	e := new(element)
+	e.key = p.lexer.tokenString(p.next())
+	p.parseParameters()
+	p.next() // eat {
+	p.addElement(e)
+}
+
+func parseFieldAlias(p *parser) {
+	f := new(field)
+	p.next() // eat "alias"
+	f.key = p.lexer.tokenString(p.next())
+	p.next() // eat "="
+	p.parseFieldValue(f)
+	p.addFieldAlias(f)
+}
+
+func parseElementAlias(p *parser) {
+	e := new(element)
+	p.next() // eat "alias"
+	e.key = p.lexer.tokenString(p.next())
+	p.parsePrototypeParameters(e)
+	p.addElementAlias(e)
+}
+
+func parsePrototypeField(p *parser) {
+	f := new(field)
+	f.key = p.lexer.tokenString(p.next())
+	p.parseFieldValue(f)
+	p.addPrototypeField(f)
+}
+
+func parsePrototypeElement(p *parser) {
+	e := new(element)
+	e.key = p.lexer.tokenString(p.next())
+	p.parsePrototypeParameters(e)
+	p.next()
+	p.addPrototypeElement(e)
+}
+
+func (p *parser) parsePrototypeParameters(e *element) {
+	// must use current to stop accidentally double-eating the open brace
+	if p.current().tkntype != tknOpenBracket {
+		return
+	}
+	p.addPrototypeParameter()
+}
+
+func (p *parser) addPrototypeElement(e *element) {
+	if p.prototype.elements == nil {
+		p.prototype.elements = make(map[string][]*element)
+	}
+	if p.prototype.elements[e.key] == nil {
+		p.prototype.elements[e.key] = make([]*element, 0)
+	}
+	p.prototype.elements[e.key] = append(p.prototype.elements[e.key], e)
+}
+
+func (p *parser) addPrototypeField(f *field) {
+	if p.prototype.fields == nil {
+		p.prototype.fields = make(map[string][]*field)
+	}
+	if p.prototype.fields[f.key] == nil {
+		p.prototype.fields[f.key] = make([]*field, 0)
+	}
+	p.prototype.fields[f.key] = append(p.prototype.fields[f.key], f)
+}
+
+func (p *parser) addFieldAlias(f *field) {
+	if p.scope.fieldAliases == nil {
+		p.scope.fieldAliases = make(map[string][]*field)
+	}
+	if p.scope.fieldAliases[f.key] == nil {
+		p.scope.fieldAliases[f.key] = make([]*field, 0)
+	}
+	p.scope.fieldAliases[f.key] = append(p.scope.fieldAliases[f.key], f)
+}
+
+func (p *parser) addElementAlias(e *element) {
+	if p.scope.elementAliases == nil {
+		p.scope.elementAliases = make(map[string][]*element)
+	}
+	if p.scope.elementAliases[e.key] == nil {
+		p.scope.elementAliases[e.key] = make([]*element, 0)
+	}
+	p.scope.elementAliases[e.key] = append(p.scope.elementAliases[e.key], e)
+}
+
+func (p *parser) addElement(e *element) {
+	if p.scope.elements == nil {
+		p.scope.elements = make(map[string][]*element)
+	}
+	if p.scope.elements[e.key] == nil {
+		p.scope.elements[e.key] = make([]*element, 0)
+	}
+	p.scope.elements[e.key] = append(p.scope.elements[e.key], e)
 }
 
 func (p *parser) addField(f *field) {
@@ -125,10 +215,6 @@ func (p *parser) parseFieldArray(f *field) {
 		f.value = append(f.value, p.lexer.tokenString(p.next()))
 	}
 	p.next() // eat final ']'
-}
-
-func parseElement(p *parser) {
-
 }
 
 func parseElementClosure(p *parser) {
@@ -219,18 +305,6 @@ func (p *parser) parsePrototypeArray(f *field) {
 	p.next() // eat final ']'
 }
 
-func (p *parser) addPrototypeField(f *field) {
-	if p.prototype.fields == nil {
-		p.prototype.fields = make(map[string][]*field)
-	}
-	if p.prototype.fields[f.key] == nil {
-		p.prototype.fields[f.key] = make([]*field, 0)
-	} else {
-		p.errors = append(p.errors, fmt.Sprintf("Duplicate field in prototype."))
-	}
-	p.prototype.fields[f.key] = append(p.prototype.fields[f.key], f)
-}
-
 func parsePrototypeFieldAlias(p *parser) {
 	f := new(field)
 	p.next() // eat the alias keyword
@@ -290,10 +364,6 @@ func parsePrototypeElementAlias(p *parser) {
 		break
 	}
 	p.addPrototypeElement(e)
-}
-
-func (p *parser) addPrototypeElement(e *element) {
-	p.prototype.elements[e.key] = append(p.prototype.elements[e.key], e)
 }
 
 func parsePrototypeElement(p *parser) {

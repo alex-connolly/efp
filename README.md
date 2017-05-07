@@ -116,3 +116,11 @@ alias hello = hello {
     hello
 }
 ```
+
+## Errors
+
+| Error      | Description         |
+| :-------------: |:-------------:|
+| Alias Not Found | The alias is not visible in the current scope. |
+| Duplicate Element |    |
+| Duplicate Field |     |
