@@ -99,15 +99,15 @@ key = ["###[0-7][0-7][0-7]###":4] // at most 4 regex matching sequences
 key = [3:bool:3] // precisely 3 boolean values
 ```
 
-Arrays are not bound to have one type, and the following and legal and enforceable declarations:
+Arrays are not bound to one regex sequence, and the following are legal and enforceable declarations:
 
 ```go
-key = [int|string] // array of ints or strings
-harder = [string]|[int] // int array or string array
-twod = [[string]] // two-dimensional string array
-harder_mixed = [string|[string]] // array of strings or 2d array of strings
-limits = [string|[3:string:5]] // array of strings or 2d array of strings (2nd bounded by 3,5)
-complex = [string|[3:string:5]|[3:[int]:3]|["x"|"[a-zA-Z]+"|[[bool]]] // have fun!
+key = [int|string]                      // array of ints or strings
+harder = [string]|[int]                 // int array or string array
+twod = [[string]]                       // two-dimensional string array
+harder_mixed = [string|[string]]        // array of strings or 2d array of strings
+limits = [string|[3:string:5]]          // array of strings or 2d array of strings (2nd bounded by 3,5)
+complex = [string|[3:string:5]|[3:[int]:3]|["x"|"[a-zA-Z]+"|[[bool]]]
 ```
 
 Possible examples matching the ```complex``` field:
@@ -126,9 +126,29 @@ These declarations are suddenly getting very complicated, surely there's some wa
 It is possible to declare aliases within a efp file, with the normal scope boundaries. Aliases are tantamount to C macros, in that they simply perform a text replace. If the text contains an element, that element will be evaluated and added to the tree.
 
 ```go
+// text alias
+alias name = "ender"
+// field alias
+alias x : num = 5
+// element alias
+alias divs : divisions("name") {
+    x
+}
+```
+
+To use aliases:
+
+```go
+alias name = "ender"
 alias x : num = 5
 alias divs : divisions("name") {
     x
+}
+
+
+base {
+    name = name
+    divs
 }
 ```
 
@@ -143,19 +163,23 @@ alias 2Dbool : [[bool]]
 complex = [string|some_strings|3ints|[weird_regex]|2Dbool]
 ```
 
-
-
 ### Recursion
 
 As ```efp``` elements are lazily validated against the prototype tree, recursion will not cause an infinite loop.  Recursion may be accomplied through the use of aliasing:
 
 ```go
-alias hello : hello {
-    hello
+alias h : hello {
+    h
 }
 ```
 
-## Usage
+## Usage/Installation
+
+To install, simply use:
+
+```go
+go get github.com/end-r/efp
+```
 
 There are two methods which must be called:
 
@@ -165,9 +189,16 @@ import "github.com/end-r/efp"
 
 func main(){
     p := efp.Prototype("standard.efp")
-    ast := p.Parse("file.txt")
+    e, errs := p.Parse("file.txt")
 }
 ```
+
+The full godoc for the efp can be found at:
+
+For some example applications, check out:
+
+- FireVM(https://github.com/end-r/fireVM), a VM generator
+- Vox(https://github.com/end-r/vox), a configuration system for online elections
 
 
 ## Errors
@@ -178,3 +209,4 @@ func main(){
 | Duplicate Element |    |
 | Duplicate Field |     |
 | Invalid Token |     |
+| Invalid Regex |     |

@@ -7,8 +7,10 @@ complex {
     harder = [string]|[int]
     // stored as fv(true(fv(true, string), fv(true, int)))
     mixed = [string|int]
+    // sroted as fv(true, fv(true, string))
     twod = [[string]] // two-d array
-    harder_mixed = [string|[string]] // [] of strings or [] of [] of strings
+    // stored as fv(true, fv(false, string), fv(true, string))
+    harder_mixed = [string|[string]] 
     limits = [string|[3:string:5]]
     complex = [string|[3:string:5]|[[int]]||[x|"a-zA-Z"|[bool]]]
 }

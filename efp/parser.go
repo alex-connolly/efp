@@ -3,6 +3,7 @@ package efp
 import (
 	"fmt"
 	"os"
+	"strconv"
 )
 
 type parser struct {
@@ -82,12 +83,51 @@ func isElementClosure(p *parser) bool {
 	return p.peek(p.index).tkntype == tknCloseBrace
 }
 
+func isTextAlias(p *parser) bool {
+	return false
+}
+
 func parseField(p *parser) {
 	f := new(field)
 	f.key = p.lexer.tokenString(p.next())
 	p.next() // eat =
-	p.parseFieldValue(f)
+	f.value = new(fieldValue)
+	p.parseFieldValue(f.value)
 	p.addField(f)
+}
+
+func (p *parser) parseFieldValue(fv *fieldValue) {
+	switch p.current().tkntype {
+	case tknOpenSquare:
+		p.parseArrayDeclaration(fv)
+		break
+	case tknValue:
+		child := new(fieldValue)
+		child.value = p.lexer.tokenString(p.next())
+		fv.children = append(fv.children, child)
+		break
+	}
+	if p.current().tkntype == tknOr {
+		p.next()
+		p.parseFieldValue(fv)
+	}
+}
+
+func (p *parser) parseArrayDeclaration(fv *fieldValue) {
+	p.next() // eat [
+	fv.isArray = true
+	if p.current().tkntype == tknNumber {
+		num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
+		fv.min = num
+		p.next() // eat ":"
+	}
+	p.parseFieldValue(fv)
+	if p.current().tkntype == tknColon {
+		p.next() // eat ":"
+		num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
+		fv.max = num
+	}
+	p.next() // eat ]
 }
 
 func parseElement(p *parser) {
@@ -105,7 +145,8 @@ func parseFieldAlias(p *parser) {
 	p.next() // eat ":"
 	f.key = p.lexer.tokenString(p.next())
 	p.next() // eat "="
-	p.parseFieldValue(f)
+	f.value = new(fieldValue)
+	p.parseFieldValue(f.value)
 	p.addFieldAlias(f)
 }
 
@@ -123,7 +164,8 @@ func parseElementAlias(p *parser) {
 func parsePrototypeField(p *parser) {
 	f := new(field)
 	f.key = p.lexer.tokenString(p.next())
-	p.parseFieldValue(f)
+	f.value = new(fieldValue)
+	p.parseFieldValue(f.value)
 	p.addPrototypeField(f)
 }
 
@@ -156,11 +198,11 @@ func (p *parser) parsePrototypeParameters(e *element) {
 
 func (p *parser) parsePrototypeParameter() {
 	if p.prototype.parameters == nil {
-		p.prototype.parameters = make([]*fieldValue)
+		p.prototype.parameters = make([]*fieldValue, 0)
 	}
 	fv := new(fieldValue)
-
-	p.prototype.parameters = append(p.prototype.parameters)
+	p.parseFieldValue(fv)
+	p.prototype.parameters = append(p.prototype.parameters, fv)
 
 }
 
@@ -185,23 +227,23 @@ func (p *parser) addPrototypeField(f *field) {
 }
 
 func (p *parser) addFieldAlias(f *field) {
-	if p.scope.fieldAliases == nil {
-		p.scope.fieldAliases = make(map[string][]*field)
+	if p.scope.declaredFieldAliases == nil {
+		p.scope.declaredFieldAliases = make(map[string][]*field)
 	}
-	if p.scope.fieldAliases[f.key] == nil {
-		p.scope.fieldAliases[f.key] = make([]*field, 0)
+	if p.scope.declaredFieldAliases[f.key] == nil {
+		p.scope.declaredFieldAliases[f.key] = make([]*field, 0)
 	}
-	p.scope.fieldAliases[f.key] = append(p.scope.fieldAliases[f.key], f)
+	p.scope.declaredFieldAliases[f.key] = append(p.scope.declaredFieldAliases[f.key], f)
 }
 
 func (p *parser) addElementAlias(e *element) {
-	if p.scope.elementAliases == nil {
-		p.scope.elementAliases = make(map[string][]*element)
+	if p.scope.declaredElementAliases == nil {
+		p.scope.declaredElementAliases = make(map[string][]*element)
 	}
-	if p.scope.elementAliases[e.key] == nil {
-		p.scope.elementAliases[e.key] = make([]*element, 0)
+	if p.scope.declaredElementAliases[e.key] == nil {
+		p.scope.declaredElementAliases[e.key] = make([]*element, 0)
 	}
-	p.scope.elementAliases[e.key] = append(p.scope.elementAliases[e.key], e)
+	p.scope.declaredElementAliases[e.key] = append(p.scope.declaredElementAliases[e.key], e)
 }
 
 func (p *parser) addElement(e *element) {
@@ -220,37 +262,6 @@ func (p *parser) addField(f *field) {
 	} else {
 		p.errors = append(p.errors, fmt.Sprintf("Duplicate field %s in prototype (max %d)", f.key, 1))
 	}
-}
-
-func (p *parser) parseFieldValue(f *field) {
-	// first token guaranteed to be a VALUE
-	if f.value == nil {
-		f.value = make([]*fieldValue, 0)
-	}
-	fv := new(fieldValue)
-	fv.regex = p.lexer.tokenString(p.next())
-	f.value = append(f.value, fv)
-	switch p.current().tkntype {
-	case tknOr:
-		p.parseFieldValue(f)
-		break
-	}
-}
-
-func (p *parser) parseFieldArray(f *field) {
-	// parse field array
-	for p.current().tkntype != tknCloseSquare {
-		switch p.next().tkntype {
-		case tknComma:
-			p.next()
-			break
-		}
-		if f.value == nil {
-			f.value = make([]string, 0)
-		}
-		f.value = append(f.value, p.lexer.tokenString(p.next()))
-	}
-	p.next() // eat final ']'
 }
 
 func parseElementClosure(p *parser) {
@@ -294,7 +305,8 @@ func parsePrototypeFieldAlias(p *parser) {
 	f.key = p.lexer.tokenString(p.next())
 	// eat =
 	p.next()
-	p.parseFieldValue(f)
+	f.value = new(fieldValue)
+	p.parseFieldValue(f.value)
 	p.addFieldAlias(f)
 }
 
@@ -314,22 +326,6 @@ func (p *parser) parseParameters() {
 		return
 	}
 	p.next() // eat "("
-	for p.current().tkntype != tknCloseBracket {
-		switch p.current().tkntype {
-		case tknOr:
-			p.next()
-			p.parseFieldValue()
-			break
-		case tknValue:
-			break
-		case tkn
-		}
-		if p.scope.parameters == nil {
-			p.scope.parameters = make([]*fieldValue, 0)
-		}
-		fv := new(fieldValue)
-		p.scope.parameters = append(p.scope.parameters, p.lexer.tokenString(p.next()))
-	}
 	p.next() // eat ")"'
 }
 
