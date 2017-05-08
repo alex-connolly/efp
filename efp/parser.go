@@ -5,6 +5,16 @@ import (
 	"os"
 )
 
+type parser struct {
+	constructs []construct
+	prototype  *element
+	scope      *element
+	lexer      *lexer
+	tokens     []token
+	index      int
+	errors     []string
+}
+
 func (p *parser) Parse(filename string) {
 	f, err := os.Open(filename)
 	if err != nil {
@@ -92,7 +102,7 @@ func parseFieldAlias(p *parser) {
 	f := new(field)
 	p.next() // eat "alias"
 	f.alias = p.lexer.tokenString(p.next())
-	p.next() // eat "="
+	p.next() // eat ":"
 	f.key = p.lexer.tokenString(p.next())
 	p.next() // eat "="
 	p.parseFieldValue(f)
@@ -103,9 +113,10 @@ func parseElementAlias(p *parser) {
 	e := new(element)
 	p.next() // eat "alias"
 	e.alias = p.lexer.tokenString(p.next())
-	p.next() // eat "="
+	p.next() // eat ":"
 	e.key = p.lexer.tokenString(p.next())
 	p.parsePrototypeParameters(e)
+	p.next() // eat "{"
 	p.addElementAlias(e)
 }
 
@@ -256,14 +267,14 @@ func (p *parser) importParseConstructs() {
 	}
 }
 
-func isPrototypeFieldAlias(p *parser) bool {
+func isFieldAlias(p *parser) bool {
 	return p.lexer.tokenString(p.peek(p.index)) == "alias" &&
-		p.peek(p.index+2).tkntype == tknAssign
+		p.peek(p.index+3).tkntype == tknAssign
 }
 
-func isPrototypeElementAlias(p *parser) bool {
+func isElementAlias(p *parser) bool {
 	return p.lexer.tokenString(p.peek(p.index)) == "alias" &&
-		p.peek(p.index+2).tkntype == tknOpenBrace
+		p.peek(p.index+3).tkntype == tknOpenBrace
 }
 
 func isPrototypeField(p *parser) bool {
@@ -277,34 +288,14 @@ func isPrototypeElement(p *parser) bool {
 	return p.peek(p.index+1).tkntype == tknOpenBrace
 }
 
-func isPrototypeElementClosure(p *parser) bool {
-	return p.peek(p.index).tkntype == tknCloseBrace
-}
-
 func parsePrototypeFieldAlias(p *parser) {
 	f := new(field)
 	p.next() // eat the alias keyword
 	f.key = p.lexer.tokenString(p.next())
 	// eat =
 	p.next()
-	switch p.next().tkntype {
-	case tknOpenSquare:
-		// parse field array
-		p.parseFieldArray()
-		break
-	case tknValue:
-		p.parseFieldValue()
-		break
-	}
-	p.addPrototypeFieldAlias(f)
-}
-
-func (p *parser) addPrototypeFieldAlias(f *field) {
-	if p.prototype.fieldAliases[f.key] == nil {
-		p.prototype.fieldAliases[f.key] = append(p.prototype.fieldAliases[f.key], f)
-	} else {
-		p.errors = append(p.errors, fmt.Sprintf("Duplicate field in prototype."))
-	}
+	p.parseFieldValue(f)
+	p.addFieldAlias(f)
 }
 
 func (p *parser) current() token {
@@ -324,9 +315,19 @@ func (p *parser) parseParameters() {
 	}
 	p.next() // eat "("
 	for p.current().tkntype != tknCloseBracket {
-		if p.scope.parameters == nil {
-			p.scope.parameters = make([]string, 0)
+		switch p.current().tkntype {
+		case tknOr:
+			p.next()
+			p.parseFieldValue()
+			break
+		case tknValue:
+			break
+		case tkn
 		}
+		if p.scope.parameters == nil {
+			p.scope.parameters = make([]*fieldValue, 0)
+		}
+		fv := new(fieldValue)
 		p.scope.parameters = append(p.scope.parameters, p.lexer.tokenString(p.next()))
 	}
 	p.next() // eat ")"'
@@ -340,14 +341,4 @@ func (p *parser) importPrototypeConstructs() {
 		construct{"prototype element", isPrototypeElement, parsePrototypeElement},
 		construct{"element closure", isElementClosure, parseElementClosure},
 	}
-}
-
-type parser struct {
-	constructs []construct
-	prototype  *element
-	scope      *element
-	lexer      *lexer
-	tokens     []token
-	index      int
-	errors     []string
 }

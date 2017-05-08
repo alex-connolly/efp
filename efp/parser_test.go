@@ -3,15 +3,82 @@ package efp
 import "testing"
 
 func TestFieldAlias(t *testing.T) {
-
+	// test only field alias
+	p := basicParser(`alias x : key = "value"`)
+	if !isFieldAlias(p) {
+		t.Fail()
+	}
+	parseFieldAlias(p)
+	if p.scope.fieldAliases["x"] == nil {
+		t.Fail()
+	}
+	if p.scope.fieldAliases["x"][0].key != "key" {
+		t.Fail()
+	}
+	if p.scope.fieldAliases["x"][0].value[0].regex != "value" {
+		t.Fail()
+	}
 }
 
 func TestElementAlias(t *testing.T) {
-
+	// test only element alias
+	p := basicParser(`alias x : key {}`)
+	if !isElementAlias(p) {
+		t.Fail()
+	}
+	parseElementAlias(p)
+	if p.scope.elementAliases["x"] == nil {
+		t.Fail()
+	}
+	if p.scope.elementAliases["x"][0].key != "key" {
+		t.Fail()
+	}
 }
 
 func TestRecursiveElementAlias(t *testing.T) {
+	// test only element alias
+	p := basicParser(`alias x : key {}`)
+	if !isElementAlias(p) {
+		t.Fail()
+	}
+	parseElementAlias(p)
+	if p.scope.elementAliases["x"] == nil {
+		t.Fail()
+	}
+	if p.scope.elementAliases["x"][0].key != "key" {
+		t.Fail()
+	}
+}
 
+func TestIdentiferMethods(t *testing.T) {
+	p := basicParser("alias x : a = 4")
+	if !isFieldAlias(p) {
+		t.Fail()
+	}
+	p = basicParser("alias x : element {}")
+	if !isElementAlias(p) {
+		t.Fail()
+	}
+	p = basicParser("alias x : 5")
+	if !isTextAlias(p) {
+		t.Fail()
+	}
+	p = basicParser("element {}")
+	if !isElement(p) {
+		t.Fail()
+	}
+	p = basicParser(`element("name", 5){}`)
+	if !isElement(p) {
+		t.Fail()
+	}
+	p = basicParser(`x = 5`)
+	if !isField(p) {
+		t.Fail()
+	}
+	p = basicParser(`}`)
+	if !isElementClosure(p) {
+		t.Fail()
+	}
 }
 
 func basicParser(data string) *parser {
