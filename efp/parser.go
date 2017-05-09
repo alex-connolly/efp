@@ -65,8 +65,8 @@ type construct struct {
 	process func(*parser)
 }
 
-func (p *parser) peek(index int) token {
-	return p.lexer.tokens[index]
+func (p *parser) peek(offset int) token {
+	return p.lexer.tokens[offset]
 }
 
 func isField(p *parser) bool {
@@ -75,8 +75,10 @@ func isField(p *parser) bool {
 }
 
 func isElement(p *parser) bool {
-	return p.peek(p.index).tkntype == tknValue &&
-		p.peek(p.index+1).tkntype == tknOpenBrace
+	return (p.peek(p.index).tkntype == tknValue &&
+		p.peek(p.index+1).tkntype == tknOpenBrace) ||
+		(p.peek(p.index).tkntype == tknValue &&
+			p.peek(p.index+1).tkntype == tknOpenBracket)
 }
 
 func isElementClosure(p *parser) bool {
@@ -106,6 +108,9 @@ func (p *parser) parseFieldValue(fv *fieldValue) {
 		child.value = p.lexer.tokenString(p.next())
 		fv.children = append(fv.children, child)
 		break
+	}
+	if p.index >= len(p.lexer.tokens) {
+		return
 	}
 	if p.current().tkntype == tknOr {
 		p.next()
@@ -227,23 +232,23 @@ func (p *parser) addPrototypeField(f *field) {
 }
 
 func (p *parser) addFieldAlias(f *field) {
-	if p.scope.declaredFieldAliases == nil {
-		p.scope.declaredFieldAliases = make(map[string][]*field)
+	if p.prototype.declaredFieldAliases == nil {
+		p.prototype.declaredFieldAliases = make(map[string][]*field)
 	}
-	if p.scope.declaredFieldAliases[f.key] == nil {
-		p.scope.declaredFieldAliases[f.key] = make([]*field, 0)
+	if p.prototype.declaredFieldAliases[f.alias] == nil {
+		p.prototype.declaredFieldAliases[f.alias] = make([]*field, 0)
 	}
-	p.scope.declaredFieldAliases[f.key] = append(p.scope.declaredFieldAliases[f.key], f)
+	p.prototype.declaredFieldAliases[f.alias] = append(p.prototype.declaredFieldAliases[f.alias], f)
 }
 
 func (p *parser) addElementAlias(e *element) {
-	if p.scope.declaredElementAliases == nil {
-		p.scope.declaredElementAliases = make(map[string][]*element)
+	if p.prototype.declaredElementAliases == nil {
+		p.prototype.declaredElementAliases = make(map[string][]*element)
 	}
-	if p.scope.declaredElementAliases[e.key] == nil {
-		p.scope.declaredElementAliases[e.key] = make([]*element, 0)
+	if p.prototype.declaredElementAliases[e.alias] == nil {
+		p.prototype.declaredElementAliases[e.alias] = make([]*element, 0)
 	}
-	p.scope.declaredElementAliases[e.key] = append(p.scope.declaredElementAliases[e.key], e)
+	p.prototype.declaredElementAliases[e.alias] = append(p.prototype.declaredElementAliases[e.alias], e)
 }
 
 func (p *parser) addElement(e *element) {
@@ -260,7 +265,8 @@ func (p *parser) addField(f *field) {
 	if p.scope.fields[f.key] == nil {
 		p.scope.fields[f.key] = append(p.scope.fields[f.key], f)
 	} else {
-		p.errors = append(p.errors, fmt.Sprintf("Duplicate field %s in prototype (max %d)", f.key, 1))
+		p.errors = append(p.errors,
+			fmt.Sprintf("Duplicate field %s in prototype (max %d)", f.key, 1))
 	}
 }
 
@@ -278,14 +284,18 @@ func (p *parser) importParseConstructs() {
 	}
 }
 
+// alias x : key = value
 func isFieldAlias(p *parser) bool {
 	return p.lexer.tokenString(p.peek(p.index)) == "alias" &&
-		p.peek(p.index+3).tkntype == tknAssign
+		p.peek(p.index+2).tkntype == tknColon &&
+		p.peek(p.index+4).tkntype == tknAssign
 }
 
+// alias divs : divs(){}
 func isElementAlias(p *parser) bool {
 	return p.lexer.tokenString(p.peek(p.index)) == "alias" &&
-		p.peek(p.index+3).tkntype == tknOpenBrace
+		p.peek(p.index+1).tkntype == tknValue &&
+		p.peek(p.index+2).tkntype == tknColon
 }
 
 func isPrototypeField(p *parser) bool {

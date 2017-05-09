@@ -197,8 +197,8 @@ The full godoc for the efp can be found at:
 
 For some example applications, check out:
 
-- FireVM(https://github.com/end-r/fireVM), a VM generator
-- Vox(https://github.com/end-r/vox), a configuration system for online elections
+- [FireVM](https://github.com/end-r/fireVM), a VM generator
+- [Vox](https://github.com/end-r/vox), a configuration system for online elections
 
 
 ## Errors

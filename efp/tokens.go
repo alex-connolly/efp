@@ -42,28 +42,15 @@ func getProtoTokens() []protoToken {
 	}
 }
 
-func processNewLine(l *lexer) token {
-	l.line++
-	return token{
-		tkntype: tknNone,
-	}
-}
+func processOperator(tkn tokenType) processorFunc {
+	return func(l *lexer) (t token) {
 
-func processIgnored(l *lexer) token {
-	return token{
-		tkntype: tknNone,
-	}
-}
-
-func processNumber(l *lexer) (t token) {
-	t.start = l.offset
-	t.end = l.offset
-	t.tkntype = tknValue
-	for '0' <= l.buffer[l.offset] && l.buffer[l.offset] <= '9' {
+		t.start = l.offset
+		t.end = l.offset
+		t.tkntype = tkn
 		l.offset++
-		t.end++
+		return t
 	}
-	return t
 }
 
 func isIdentifier(b byte) bool {
@@ -76,50 +63,6 @@ func isNumber(b byte) bool {
 
 func isString(b byte) bool {
 	return ((b == '"') || (b == '\''))
-}
-
-func processIdentifier(l *lexer) token {
-	t := new(token)
-	t.start = l.offset
-	t.end = l.offset
-	t.tkntype = tknValue
-	if l.isEOF() {
-		return *t
-	}
-	// we already know the first byte is in id form
-	b := l.nextByte()
-	t.end++
-	for isIdentifier(b) {
-		t.end++
-		if l.isEOF() {
-			return *t
-		}
-		b = l.nextByte()
-	}
-	return *t
-}
-
-func processString(l *lexer) token {
-	t := new(token)
-	t.start = l.offset
-	t.end = l.offset
-	t.tkntype = tknValue
-	b := l.nextByte()
-	b2 := l.nextByte()
-	for b != b2 {
-		t.end++
-		b2 = l.nextByte()
-	}
-	return *t
-}
-
-func processOperator(tkn tokenType) processorFunc {
-	return func(l *lexer) (t token) {
-		t.start = l.offset
-		t.end = l.offset
-		t.tkntype = tkn
-		return t
-	}
 }
 
 func isWhitespace(b byte) bool {

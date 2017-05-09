@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestBasicOperators(t *testing.T) {
+func TestLexerBasicOperators(t *testing.T) {
 	SingleLexer(t, tknAssign, "=")
 	SingleLexer(t, tknOpenBrace, "{")
 	SingleLexer(t, tknCloseBrace, "}")
@@ -26,7 +26,7 @@ func SingleLexer(t *testing.T, tkn tokenType, data string) {
 	}
 }
 
-func TestDuplicateOperators(t *testing.T) {
+func TestLexerDuplicateOperators(t *testing.T) {
 	MultiLexer(t, tknAssign, "=", 3)
 	MultiLexer(t, tknOpenBrace, "{", 2)
 	MultiLexer(t, tknCloseBrace, "}", 5)
@@ -50,7 +50,7 @@ func MultiLexer(t *testing.T, tkn tokenType, data string, times int) {
 	}
 }
 
-func TestValueLexingLength(t *testing.T) {
+func TestLexerValueLength(t *testing.T) {
 	l := lex([]byte("hello this is dog"))
 	if len(l.tokens) != 4 {
 		t.Fail()
@@ -63,12 +63,19 @@ func TestValueLexingLength(t *testing.T) {
 	}
 }
 
-func TestTokenString(t *testing.T) {
+func TestLexerTokenString(t *testing.T) {
 	l := lex([]byte("hello this is dog"))
 	expected := []string{"hello", "this", "is", "dog"}
 	for i, tk := range l.tokens {
 		if l.tokenString(tk) != expected[i] {
 			t.Fail()
 		}
+	}
+}
+
+func TestLexerTokenLengths(t *testing.T) {
+	l := lex([]byte("alias x : y = 5"))
+	if len(l.tokens) != 6 {
+		t.Fail()
 	}
 }
