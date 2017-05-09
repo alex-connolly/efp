@@ -8,6 +8,7 @@ type field struct {
 
 // fv(true, fv(false, int), fv(false, string))
 type fieldValue struct {
+	parent   *fieldValue
 	isArray  bool
 	value    string
 	children []*fieldValue

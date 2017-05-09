@@ -129,9 +129,9 @@ It is possible to declare aliases within a efp file, with the normal scope bound
 // text alias
 alias name = "ender"
 // field alias
-alias x : num = 5
+alias x = num : int
 // element alias
-alias divs : divisions("name") {
+alias divs = divisions("name") {
     x
 }
 ```
@@ -140,8 +140,8 @@ To use aliases:
 
 ```go
 alias name = "ender"
-alias x : num = 5
-alias divs : divisions("name") {
+alias x = num : int
+alias divs = divisions("name") {
     x
 }
 
@@ -155,10 +155,10 @@ base {
 To simplify the complex declaration:
 
 ```go
-alias 3ints : [3:int:3]
-alias some_strings : [3:string:5]
-alias weird_regex : "x"|"[a-zA-Z]+"
-alias 2Dbool : [[bool]]
+alias 3ints = [3:int:3]
+alias some_strings = [3:string:5]
+alias weird_regex = "x"|"[a-zA-Z]+"
+alias 2Dbool = [[bool]]
 
 complex = [string|some_strings|3ints|[weird_regex]|2Dbool]
 ```
@@ -197,7 +197,7 @@ The full godoc for the efp can be found at:
 
 For some example applications, check out:
 
-- [FireVM](https://github.com/end-r/fireVM), a VM generator
+- [FireVM](https://github.com/end-r/fireVM), a costly VM generator
 - [Vox](https://github.com/end-r/vox), a configuration system for online elections
 
 

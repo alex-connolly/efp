@@ -90,6 +90,7 @@ func isTextAlias(p *parser) bool {
 }
 
 func parseField(p *parser) {
+	fmt.Printf("here lads\n")
 	f := new(field)
 	f.key = p.lexer.tokenString(p.next())
 	p.next() // eat =
@@ -98,15 +99,23 @@ func parseField(p *parser) {
 	p.addField(f)
 }
 
+func (fv *fieldValue) addChild(regex string) {
+	if fv.children == nil {
+		fv.children = make([]*fieldValue, 0)
+	}
+	val := new(fieldValue)
+	val.parent = fv
+	val.value = regex
+	fv.children = append(fv.children, val)
+}
+
 func (p *parser) parseFieldValue(fv *fieldValue) {
 	switch p.current().tkntype {
 	case tknOpenSquare:
 		p.parseArrayDeclaration(fv)
 		break
 	case tknValue:
-		child := new(fieldValue)
-		child.value = p.lexer.tokenString(p.next())
-		fv.children = append(fv.children, child)
+		fv.addChild(p.lexer.tokenString(p.next()))
 		break
 	}
 	if p.index >= len(p.lexer.tokens) {
@@ -127,6 +136,9 @@ func (p *parser) parseArrayDeclaration(fv *fieldValue) {
 		p.next() // eat ":"
 	}
 	p.parseFieldValue(fv)
+	if p.index >= len(p.lexer.tokens) {
+		return
+	}
 	if p.current().tkntype == tknColon {
 		p.next() // eat ":"
 		num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
@@ -167,8 +179,10 @@ func parseElementAlias(p *parser) {
 }
 
 func parsePrototypeField(p *parser) {
+	fmt.Printf("here lads\n")
 	f := new(field)
 	f.key = p.lexer.tokenString(p.next())
+	p.next() // eat :
 	f.value = new(fieldValue)
 	p.parseFieldValue(f.value)
 	p.addPrototypeField(f)
@@ -208,7 +222,6 @@ func (p *parser) parsePrototypeParameter() {
 	fv := new(fieldValue)
 	p.parseFieldValue(fv)
 	p.prototype.parameters = append(p.prototype.parameters, fv)
-
 }
 
 func (p *parser) addPrototypeElement(e *element) {
@@ -222,6 +235,7 @@ func (p *parser) addPrototypeElement(e *element) {
 }
 
 func (p *parser) addPrototypeField(f *field) {
+	fmt.Printf("adding field\n")
 	if p.prototype.fields == nil {
 		p.prototype.fields = make(map[string][]*field)
 	}
@@ -286,6 +300,7 @@ func (p *parser) importParseConstructs() {
 
 // alias x : key = value
 func isFieldAlias(p *parser) bool {
+
 	return p.lexer.tokenString(p.peek(p.index)) == "alias" &&
 		p.peek(p.index+2).tkntype == tknColon &&
 		p.peek(p.index+4).tkntype == tknAssign
@@ -299,6 +314,7 @@ func isElementAlias(p *parser) bool {
 }
 
 func isPrototypeField(p *parser) bool {
+	fmt.Printf("??\n")
 	if len(p.lexer.tokens)-p.index < 2 {
 		return false
 	}
