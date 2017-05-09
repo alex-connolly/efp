@@ -33,8 +33,7 @@ func (p *parser) Parse(filename string) {
 		fmt.Printf("Failed to read from file.\n")
 		return
 	}
-	p.importParseConstructs()
-	p.lexer = lex(bytes)
+	p.parseBytes(bytes)
 }
 
 func (p *parser) Prototype(filename string) {
@@ -55,6 +54,11 @@ func (p *parser) Prototype(filename string) {
 		return
 	}
 	p.importPrototypeConstructs()
+	p.lexer = lex(bytes)
+}
+
+func (p *parser) parseBytes(bytes []byte) {
+	p.importParseConstructs()
 	p.lexer = lex(bytes)
 }
 
