@@ -19,11 +19,8 @@ func TestLexerBasicOperators(t *testing.T) {
 
 func SingleLexer(t *testing.T, tkn tokenType, data string) {
 	l := lex([]byte(data))
-	if len(l.tokens) != 1 {
-		t.Fail()
-	} else if l.tokens[0].tkntype != tkn {
-		t.Fail()
-	}
+	assert(t, len(l.tokens) == 1, "Produced wrong number of tokens")
+	assert(t, l.tokens[0].tkntype == tkn, "Wrong token type")
 }
 
 func TestLexerDuplicateOperators(t *testing.T) {
@@ -40,26 +37,18 @@ func TestLexerDuplicateOperators(t *testing.T) {
 
 func MultiLexer(t *testing.T, tkn tokenType, data string, times int) {
 	l := lex([]byte(strings.Repeat(data, times)))
-	if len(l.tokens) != times {
-		t.Fail()
-	}
+	assert(t, len(l.tokens) == times, "Produced wrong number of tokens")
 	for i := 0; i < times; i++ {
-		if l.tokens[i].tkntype != tkn {
-			t.Fail()
-		}
+		assert(t, l.tokens[i].tkntype == tkn, "Wrong token type")
 	}
 }
 
 func TestLexerValueLength(t *testing.T) {
 	l := lex([]byte("hello this is dog"))
-	if len(l.tokens) != 4 {
-		t.Fail()
-	}
+	assert(t, len(l.tokens) == 4, "wrong token number")
 	expected := []int{5, 4, 2, 3}
 	for i, tk := range l.tokens {
-		if tk.end-tk.start != expected[i] {
-			t.Fail()
-		}
+		assert(t, tk.end-tk.start == expected[i], "wrong token string")
 	}
 }
 
@@ -67,15 +56,11 @@ func TestLexerTokenString(t *testing.T) {
 	l := lex([]byte("hello this is dog"))
 	expected := []string{"hello", "this", "is", "dog"}
 	for i, tk := range l.tokens {
-		if l.tokenString(tk) != expected[i] {
-			t.Fail()
-		}
+		assert(t, l.tokenString(tk) == expected[i], "Wrong token")
 	}
 }
 
 func TestLexerTokenLengths(t *testing.T) {
 	l := lex([]byte("alias x : y = 5"))
-	if len(l.tokens) != 6 {
-		t.Fail()
-	}
+	assert(t, len(l.tokens) == 6, "wrong token number")
 }
