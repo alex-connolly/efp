@@ -170,7 +170,7 @@ func TestParserPrototypeFieldAliased(t *testing.T) {
 }
 
 func TestParserPrototypeFieldArray(t *testing.T) {
-	/*p := basicParser("name : [string]")
+	p := basicParser("name : [string]")
 	if !isPrototypeField(p) {
 		t.Fail()
 	}
@@ -213,5 +213,5 @@ func TestParserPrototypeFieldArray(t *testing.T) {
 	}
 	if len(p.prototype.fields["name"]) != 1 {
 		t.Fail()
-	}*/
+	}
 }

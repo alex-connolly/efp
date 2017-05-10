@@ -4,7 +4,7 @@
 
 # Element Field Parser
 
-The element-field parser is a method of generating file validators with a clean and consistent syntax.
+The element-field parser is a method of generating configuration file validators with a clean and consistent syntax.
 
 ## Basic Concepts
 
@@ -59,7 +59,13 @@ fireVM {
 }
 ```
 
-This is then enforced in our files - all valid files must contain a top level ```fireVM``` element, and a ```name``` field, which takes a string value. In a prototype file, the ```!``` denotes a compulsory field.
+This is then enforced in our files - all valid files must contain a top level ```fireVM``` element, and a ```name``` field, which takes a string value. In a prototype file, the ```!``` denotes a compulsory field. This is actually shorthand for a declaration like this:
+
+```go
+fireVM {
+    <1:name:1> : string
+}
+```
 
 
 Types may be in one or more of the following formats:
@@ -168,7 +174,7 @@ complex = [string|some_strings|3ints|[weird_regex]|2Dbool]
 As ```efp``` elements are lazily validated against the prototype tree, recursion will not cause an infinite loop.  Recursion may be accomplied through the use of aliasing:
 
 ```go
-alias h : hello {
+alias h = hello {
     h
 }
 ```
@@ -200,6 +206,39 @@ For some example applications, check out:
 - [FireVM](https://github.com/end-r/fireVM), a costly VM generator
 - [Vox](https://github.com/end-r/vox), a configuration system for online elections
 
+## Variable Elements and Fields
+
+Sometimes, you might want an element with a user-defined key. The prototype syntax is as follows:
+
+```go
+"a-z" {
+
+}
+```
+
+Where ```"a-z"``` is an example regular expression.
+
+This system can also be used to allow duplicates within a parent element, using the ```<``` and ```>``` operators.
+
+```go
+// minimum of two elements matching this regex
+<2:"a-z"> {
+
+}
+
+// precisely three elements matching this regex
+<3:"a-i":3>(string, string){
+
+}
+```
+
+The same syntax is valid for fields, e.g:
+
+```go
+<2:"key":3> = string
+```
+
+Note that the above declaration is identical to ```go <2:key:3> = string```, but the latter is validated through string equality instead of regex.
 
 ## Errors
 

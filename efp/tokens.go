@@ -15,6 +15,8 @@ const (
 	tknCloseSquare
 	tknOpenBracket
 	tknCloseBracket
+	tknOpenCorner
+	tknCloseCorner
 	tknRequired
 	tknColon
 	tknOr
@@ -29,6 +31,8 @@ func getProtoTokens() []protoToken {
 		protoToken{"Close Bracket", is(')'), processOperator(tknCloseBracket)},
 		protoToken{"Open Brace", is('{'), processOperator(tknOpenBrace)},
 		protoToken{"Close Brace", is('}'), processOperator(tknCloseBrace)},
+		protoToken{"Open Corner", is('<'), processOperator(tknOpenCorner)},
+		protoToken{"Close Corner", is('>'), processOperator(tknCloseCorner)},
 		protoToken{"Assignment Operator", is('='), processOperator(tknAssign)},
 		protoToken{"Required Operator", is('!'), processOperator(tknRequired)},
 		protoToken{"Comma", is(','), processOperator(tknComma)},

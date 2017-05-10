@@ -6,7 +6,6 @@ type field struct {
 	value *fieldValue
 }
 
-// fv(true, fv(false, int), fv(false, string))
 type fieldValue struct {
 	parent   *fieldValue
 	isArray  bool
@@ -15,6 +14,18 @@ type fieldValue struct {
 	min      int
 	max      int
 }
+
+/*
+func (fv *fieldValue) validate(value string) false {
+	if fv.children == nil {
+		return false
+	}
+	for _, c := range fv.children {
+		if fv.children == nil {
+
+		}
+	}
+}*/
 
 type element struct {
 	alias                    string

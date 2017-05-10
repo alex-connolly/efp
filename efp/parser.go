@@ -73,26 +73,6 @@ func (p *parser) peek(offset int) token {
 	return p.lexer.tokens[offset]
 }
 
-func isField(p *parser) bool {
-	return p.peek(p.index).tkntype == tknValue &&
-		p.peek(p.index+1).tkntype == tknAssign
-}
-
-func isElement(p *parser) bool {
-	return (p.peek(p.index).tkntype == tknValue &&
-		p.peek(p.index+1).tkntype == tknOpenBrace) ||
-		(p.peek(p.index).tkntype == tknValue &&
-			p.peek(p.index+1).tkntype == tknOpenBracket)
-}
-
-func isElementClosure(p *parser) bool {
-	return p.peek(p.index).tkntype == tknCloseBrace
-}
-
-func isTextAlias(p *parser) bool {
-	return false
-}
-
 func parseField(p *parser) {
 	fmt.Printf("here lads\n")
 	f := new(field)
@@ -300,33 +280,6 @@ func (p *parser) importParseConstructs() {
 		construct{"element", isElement, parseElement},
 		construct{"element closure", isElementClosure, parseElementClosure},
 	}
-}
-
-// alias x : key = value
-func isFieldAlias(p *parser) bool {
-
-	return p.lexer.tokenString(p.peek(p.index)) == "alias" &&
-		p.peek(p.index+2).tkntype == tknColon &&
-		p.peek(p.index+4).tkntype == tknAssign
-}
-
-// alias divs : divs(){}
-func isElementAlias(p *parser) bool {
-	return p.lexer.tokenString(p.peek(p.index)) == "alias" &&
-		p.peek(p.index+1).tkntype == tknValue &&
-		p.peek(p.index+2).tkntype == tknColon
-}
-
-func isPrototypeField(p *parser) bool {
-	fmt.Printf("??\n")
-	if len(p.lexer.tokens)-p.index < 2 {
-		return false
-	}
-	return p.peek(p.index+1).tkntype == tknColon
-}
-
-func isPrototypeElement(p *parser) bool {
-	return p.peek(p.index+1).tkntype == tknOpenBrace
 }
 
 func parsePrototypeFieldAlias(p *parser) {

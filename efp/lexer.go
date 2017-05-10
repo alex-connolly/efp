@@ -10,8 +10,9 @@ type lexer struct {
 	length    int
 }
 
+// processes the next token.
 func (l *lexer) next() {
-	if l.offset >= l.length {
+	if l.isEOF() {
 		return
 	}
 	for _, pt := range getProtoTokens() {
@@ -19,7 +20,6 @@ func (l *lexer) next() {
 			//fmt.Printf("offset: %d\n", l.offset)
 			//fmt.Printf("found: %s\n", pt.name)
 			t := pt.process(l)
-
 			if t.tkntype != tknNone {
 				l.tokens = append(l.tokens, t)
 			} else {
@@ -28,14 +28,14 @@ func (l *lexer) next() {
 			break
 		}
 	}
-
 	l.next()
 }
 
 func (l *lexer) isEOF() bool {
-	return l.offset == l.length
+	return l.offset >= l.length
 }
 
+// creates a new string from the token's value
 func (l *lexer) tokenString(t token) string {
 	data := make([]byte, t.end-t.start)
 	copy(data, l.buffer[t.start:t.end])
@@ -76,7 +76,7 @@ func processNumber(l *lexer) (t token) {
 	for '0' <= l.buffer[l.offset] && l.buffer[l.offset] <= '9' {
 		l.offset++
 		t.end++
-		if l.offset == l.length {
+		if l.isEOF() {
 			return t
 		}
 	}
@@ -104,6 +104,7 @@ func processIdentifier(l *lexer) token {
 	return *t
 }
 
+// processes a string sequence to create a new token.
 func processString(l *lexer) token {
 	t := new(token)
 	t.start = l.offset
@@ -114,7 +115,7 @@ func processString(l *lexer) token {
 	for b != b2 {
 		t.end++
 		b2 = l.nextByte()
-		if l.offset == l.length {
+		if l.isEOF() {
 			return *t
 		}
 	}
