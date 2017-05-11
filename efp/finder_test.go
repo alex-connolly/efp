@@ -95,56 +95,58 @@ func TestIsElementAlias(t *testing.T) {
 }
 
 func TestIsField(t *testing.T) {
+
 	p := &parser{lexer: lex([]byte("name = 6"))}
-	assert(t, isField(p), "basic field failed")
+	t.Logf("dist: %d\n", realDistance(p, tknAssign))
+	assert(t, isField(p), "int field failed")
 	p = &parser{lexer: lex([]byte(`name = "www"`))}
-	assert(t, isField(p), "basic field failed")
+	assert(t, isField(p), "string field failed")
 	p = &parser{lexer: lex([]byte("name = hi"))}
-	assert(t, isField(p), "basic field failed")
+	assert(t, isField(p), "id field failed")
 	p = &parser{lexer: lex([]byte(`name = [hi, me, c]`))}
-	assert(t, isField(p), "basic field failed")
+	assert(t, isField(p), "array field failed")
 	p = &parser{lexer: lex([]byte(`name = ["hi", "me", "c"]`))}
-	assert(t, isField(p), "basic field failed")
+	assert(t, isField(p), "string array field failed")
 	p = &parser{lexer: lex([]byte(`name = [["hi", "me"], [6, 5, 7]]`))}
-	assert(t, isField(p), "basic field failed")
+	assert(t, isField(p), "2D array field failed")
 }
 
 func TestIsElement(t *testing.T) {
 	p := &parser{lexer: lex([]byte("name {}"))}
-	assert(t, isElement(p), "basic field failed")
+	assert(t, isElement(p), "basic element failed")
 	p = &parser{lexer: lex([]byte("name(int){}"))}
-	assert(t, isElement(p), "basic field failed")
+	assert(t, isElement(p), "parameterised element failed")
 	p = &parser{lexer: lex([]byte("name(){}"))}
-	assert(t, isElement(p), "basic field failed")
+	assert(t, isElement(p), "empty parameterised element failed")
 	p = &parser{lexer: lex([]byte("name(int, int, string){}"))}
-	assert(t, isElement(p), "basic field failed")
+	assert(t, isElement(p), "multi parameterised element failed")
 }
 
 func TestIsOperator(t *testing.T) {
 	// doesn't really need a test
 	ops := []byte{',', '|', '<', '>', '{', '}', '!', '[', ']', '(', ')'}
 	for _, op := range ops {
-		assert(t, is(op)(op), "basic field failed")
+		assert(t, is(op)(op), "operator failed")
 	}
 }
 
 func TestIsDistant(t *testing.T) {
 	p := &parser{lexer: lex([]byte("alias x = <3:name|int|string:3>(int){}"))}
 	t.Logf("distance: %d", realDistance(p, tknOpenCorner))
-	assert(t, realDistance(p, tknOpenCorner) != 4, "basic field failed")
-	assert(t, realDistance(p, tknOpenBracket) != 9, "basic field failed")
+	assert(t, realDistance(p, tknOpenCorner) != 4, "wrong corner distance")
+	assert(t, realDistance(p, tknOpenBracket) != 9, "wronf bracket distance")
 }
 
 func TestIsTextAlias(t *testing.T) {
 	p := &parser{lexer: lex([]byte("alias x = 5"))}
-	assert(t, isTextAlias(p), "basic field failed")
+	assert(t, isTextAlias(p), "int text alias failed")
 	p = &parser{lexer: lex([]byte(`alias x = hi`))}
-	assert(t, isTextAlias(p), "basic field failed")
+	assert(t, isTextAlias(p), "id text alias failed")
 	p = &parser{lexer: lex([]byte(`alias x = "5"`))}
-	assert(t, isTextAlias(p), "basic field failed")
+	assert(t, isTextAlias(p), "string text alias failed")
 }
 
 func TestIsDiscoveredAlias(t *testing.T) {
 	p := &parser{lexer: lex([]byte("hello"))}
-	assert(t, isAlias(p), "basic field failed")
+	assert(t, isAlias(p), "discovered alias failed")
 }

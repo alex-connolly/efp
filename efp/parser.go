@@ -13,7 +13,7 @@ type parser struct {
 	lexer      *lexer
 	tokens     []token
 	index      int
-	errors     []string
+	errs       []string
 }
 
 func (p *parser) Parse(filename string) {
@@ -263,7 +263,7 @@ func (p *parser) addField(f *field) {
 	if p.scope.fields[f.key] == nil {
 		p.scope.fields[f.key] = append(p.scope.fields[f.key], f)
 	} else {
-		p.errors = append(p.errors,
+		p.errs = append(p.errs,
 			fmt.Sprintf("Duplicate field %s in prototype (max %d)", f.key, 1))
 	}
 }
