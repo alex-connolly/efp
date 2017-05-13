@@ -52,13 +52,27 @@ func (p *parser) Prototype(filename string) {
 		fmt.Printf("Failed to read from file.\n")
 		return
 	}
+	p.prototypeBytes(bytes)
+}
+
+func (p *parser) prototypeBytes(bytes []byte) {
 	p.importPrototypeConstructs()
 	p.lexer = lex(bytes)
+	p.prototype = new(element)
 }
 
 func (p *parser) parseBytes(bytes []byte) {
 	p.importParseConstructs()
 	p.lexer = lex(bytes)
+	p.scope = new(element)
+}
+
+func (p *parser) parseString(text string) {
+	p.parseBytes([]byte(text))
+}
+
+func (p *parser) prototypeString(text string) {
+	p.prototypeBytes([]byte(text))
 }
 
 // A construct is a repeated pattern within an efp file
@@ -142,9 +156,9 @@ func parseFieldAlias(p *parser) {
 	f := new(field)
 	p.next() // eat "alias"
 	f.alias = p.lexer.tokenString(p.next())
-	p.next() // eat ":"
-	f.key = p.lexer.tokenString(p.next())
 	p.next() // eat "="
+	f.key = p.lexer.tokenString(p.next())
+	p.next() // eat ":"
 	f.value = new(fieldValue)
 	p.parseFieldValue(f.value)
 	p.addFieldAlias(f)
@@ -154,7 +168,7 @@ func parseElementAlias(p *parser) {
 	e := new(element)
 	p.next() // eat "alias"
 	e.alias = p.lexer.tokenString(p.next())
-	p.next() // eat ":"
+	p.next() // eat "="
 	e.key = p.lexer.tokenString(p.next())
 	p.parsePrototypeParameters(e)
 	p.next() // eat "{"
@@ -229,6 +243,10 @@ func (p *parser) addPrototypeField(f *field) {
 }
 
 func (p *parser) addFieldAlias(f *field) {
+	if p.prototype == nil {
+		fmt.Printf("prototype is nil\n")
+		return
+	}
 	if p.prototype.declaredFieldAliases == nil {
 		p.prototype.declaredFieldAliases = make(map[string][]*field)
 	}

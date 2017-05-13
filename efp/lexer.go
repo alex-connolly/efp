@@ -36,6 +36,7 @@ func (l *lexer) isEOF() bool {
 }
 
 // creates a new string from the token's value
+// TODO: escaped characters
 func (l *lexer) tokenString(t token) string {
 	data := make([]byte, t.end-t.start)
 	copy(data, l.buffer[t.start:t.end])

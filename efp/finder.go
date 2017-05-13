@@ -106,19 +106,18 @@ func isPrototypeElement(p *parser) bool {
 
 // extra is the number of "extra" values (alias x =) = 2
 func isPrototypeElementWithOffset(p *parser, offset int, extra int) bool {
-
 	// key {}
 	return (realDistance(p, tknValue, 1+extra) == offset && realDistance(p, tknOpenBrace, 1) == 1+offset) ||
-		//key(){}
-		(realDistance(p, tknValue, 1+extra) == offset && realDistance(p, tknOpenBracket, 1) == 1+offset) ||
 		// <key>{}
 		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknOpenBrace, 1) == 3+offset) ||
-		// <key|k>(){}
-		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknOpenBracket, 1) == 3+offset) ||
 		// <3:string|int>{}
 		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknOpenBrace, 1) == 5+offset) ||
 		// <3:string|int:3>{}
 		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknOpenBrace, 1) == 7+offset) ||
+		// key(){}
+		(realDistance(p, tknValue, 1+extra) == offset && realDistance(p, tknOpenBracket, 1) == 1+offset) ||
+		// <key>(){}
+		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknOpenBracket, 1) == 3+offset) ||
 		// <3:string>(){} or <string:3>(){}
 		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknOpenBracket, 1) == 5+offset) ||
 		// <3:string|int:3>(){}

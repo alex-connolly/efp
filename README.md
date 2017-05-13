@@ -205,6 +205,7 @@ For some example applications, check out:
 
 - [FireVM](https://github.com/end-r/fireVM), a costly VM generator
 - [Vox](https://github.com/end-r/vox), a configuration system for online elections
+- [LexisTextUs](https://github.com/end-r/lexis-text-us), a legal form specification for a messenger chat bot
 
 ## Variable Elements and Fields
 
@@ -248,7 +249,7 @@ Note that the above declaration is identical to ```go <2:key:3> = string```, but
 | Duplicate Element |    |
 | Duplicate Field |     |
 | Invalid Token |     |
-| Invalid Regex |     |
+| Invalid Regex | The string specified cannot be transformed into golang regex.   |
 
 ## Full Example
 
@@ -256,17 +257,21 @@ Note that the above declaration is identical to ```go <2:key:3> = string```, but
 alias LETTERS = "a-zA-Z"
 
 alias EVENT = <1:LETTERS> {
-    gender : "MF{1}"
+    gender : "[MF]"
 }
 
 alias PERSON = <1:LETTERS>{
     events {
         EVENT
     }
+    accomodation {
+        name : string!
+        room : int
+    }
 }
 
 olympics {
-    name : string!
+    city : string!
     year : int!
     athletes {
         PERSON
@@ -280,7 +285,24 @@ olympics {
 A corresponding file:
 
 ```go
-main {
-
+olympics {
+    city = "Athens"
+    year = 2004
+    athletes {
+        "Bill Gates" {
+            events {
+                "100m" {
+                    gender = "M"
+                }
+            }
+        }
+        "Steve Jobs" {
+            events {
+                "100m" {
+                    gender = "M"
+                }
+            }
+        }
+    }
 }
 ```

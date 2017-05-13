@@ -97,19 +97,3 @@ type token struct {
 	start   int
 	end     int
 }
-
-func checkAndReplaceKeywordRegex(value string) string {
-	switch value {
-	case "id":
-		return "[a-zA-Z_]+"
-	case "string":
-		return "\"[^()]\""
-	case "int":
-		return "[0-9]+"
-	case "bool":
-		return "true|false"
-	case "float":
-		return "[0-9]*.[0-9]+"
-	}
-	return value
-}
