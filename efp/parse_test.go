@@ -7,7 +7,9 @@ func TestParseSimpleField(t *testing.T) {
 	// valid example
 	p.parseBytes([]byte(`name = "ender"`))
 	assert(t, p.errs == nil, "errs should be nil")
-	assert(t, p.scope != nil, "p.scope should not be nil")
+	assertNow(t, p.scope != nil, "p.scope should not be nil")
+	assertNow(t, p.scope.fields["name"][0] != nil, "name nil")
+	assertNow(t, len(p.scope.fields["name"][0].value.children) == 1, "wrong children number")
 	assert(t, p.scope.fields["name"][0].value.children[0].value == "ender", "invalid value")
 	// invalid example
 	p.parseBytes([]byte(`name = ender`))
@@ -18,7 +20,8 @@ func TestParseArrayField(t *testing.T) {
 	p := basicParser("name : [string]")
 	p.parseBytes([]byte(`name = ["ender", "me"]`))
 	assert(t, p.errs == nil, "errs should be nil")
-	assert(t, p.scope != nil, "p.scope should not be nil")
+	assertNow(t, p.scope != nil, "p.scope should not be nil")
+	assertNow(t, p.scope.fields["name"] != nil, "fields should not be nil")
 	assert(t, p.scope.fields["name"][0].value.children[0].value == "ender", "invalid value 0")
 	assert(t, p.scope.fields["name"][0].value.children[1].value == "me", "invalid value 1")
 }
@@ -28,7 +31,8 @@ func TestParseArrayFieldMinimum(t *testing.T) {
 	p := basicParser("name : [2:string]")
 	p.parseBytes([]byte(`name = ["ender", "me"]`))
 	assert(t, p.errs == nil, "errs should be nil")
-	assert(t, p.scope != nil, "p.scope should not be nil")
+	assertNow(t, p.scope != nil, "p.scope should not be nil")
+	assertNow(t, p.scope.fields["name"] != nil, "fields should not be nil")
 	assert(t, p.scope.fields["name"][0].value.children[0].value == "ender", "invalid value 0")
 	assert(t, p.scope.fields["name"][0].value.children[1].value == "me", "invalid value 1")
 
@@ -43,7 +47,8 @@ func TestParseArrayFieldMaximum(t *testing.T) {
 	p := basicParser("name : [string:2]")
 	p.parseBytes([]byte(`name = ["ender", "me"]`))
 	assert(t, p.errs == nil, "errs should be nil")
-	assert(t, p.scope != nil, "p.scope should not be nil")
+	assertNow(t, p.scope != nil, "p.scope should not be nil")
+	assertNow(t, p.scope.fields["name"] != nil, "fields should not be nil")
 	assert(t, p.scope.fields["name"][0].value.children[0].value == "ender", "invalid value 0")
 	assert(t, p.scope.fields["name"][0].value.children[1].value == "me", "invalid value 1")
 
@@ -58,7 +63,8 @@ func TestParseArrayFieldFixed(t *testing.T) {
 	p := basicParser("name : [2:string:2]")
 	p.parseBytes([]byte(`name = ["ender", "me"]`))
 	assert(t, p.errs == nil, "errs should be nil")
-	assert(t, p.scope != nil, "p.scope should not be nil")
+	assertNow(t, p.scope != nil, "p.scope should not be nil")
+	assertNow(t, p.scope.fields["name"] != nil, "fields should not be nil")
 	assert(t, p.scope.fields["name"][0].value.children[0].value == "ender", "invalid value 0")
 	assert(t, p.scope.fields["name"][0].value.children[1].value == "me", "invalid value 1")
 

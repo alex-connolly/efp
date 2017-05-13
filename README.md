@@ -249,3 +249,38 @@ Note that the above declaration is identical to ```go <2:key:3> = string```, but
 | Duplicate Field |     |
 | Invalid Token |     |
 | Invalid Regex |     |
+
+## Full Example
+
+```go
+alias LETTERS = "a-zA-Z"
+
+alias EVENT = <1:LETTERS> {
+    gender : "MF{1}"
+}
+
+alias PERSON = <1:LETTERS>{
+    events {
+        EVENT
+    }
+}
+
+olympics {
+    name : string!
+    year : int!
+    athletes {
+        PERSON
+    }
+    officials {
+        PERSON
+    }
+}
+```
+
+A corresponding file:
+
+```go
+main {
+
+}
+```

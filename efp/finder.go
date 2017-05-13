@@ -1,30 +1,42 @@
 package efp
 
-import "fmt"
-
-const alias = "alias"
-
 // returns the distance between two tokens, but with:
 // string|int|[string]|[[int]] == 1
-func realDistance(p *parser, tk tokenType) int {
+// alias x = 2
+// string|int|x = 1
+// string | int | x = 1
+// ALIAS ALIAS2 = 2
+// horrific implementation currently
+func realDistance(p *parser, tk tokenType, number int) int {
+	found := 0
 	count := 0
 	inValue := false
+	var prev tokenType
+	prev = tknNone
 	for _, t := range p.lexer.tokens {
 		if t.tkntype == tk {
-			return count
-		}
-		if t.tkntype == tknValue ||
-			t.tkntype == tknOr ||
-			t.tkntype == tknOpenSquare ||
-			t.tkntype == tknCloseSquare {
-			if !inValue {
-				count++
-				inValue = true
+			found++
+			if found == number {
+				return count
 			}
+		}
+		if t.tkntype == tknValue {
+			if prev == tknValue {
+				inValue = false
+				count++
+			} else {
+				if !inValue {
+					count++
+					inValue = true
+				}
+			}
+		} else if t.tkntype == tknOpenSquare || t.tkntype == tknCloseSquare || t.tkntype == tknOr {
+			// do nothing
 		} else {
 			inValue = false
 			count++
 		}
+		prev = t.tkntype
 	}
 	return -1
 }
@@ -33,71 +45,87 @@ func realDistance(p *parser, tk tokenType) int {
 func isField(p *parser) bool {
 	// field can be in one of these forms:
 	// key = value
-	return (realDistance(p, tknValue) == 0 && realDistance(p, tknAssign) == 1)
+	return (realDistance(p, tknValue, 1) == 0 && realDistance(p, tknAssign, 1) == 1)
 
 }
 
 // elements are of the form key { or key(params){
 func isElement(p *parser) bool {
 	// key {}
-	return (realDistance(p, tknValue) == 0 && realDistance(p, tknOpenBrace) == 1) &&
+	return (realDistance(p, tknValue, 1) == 0 && realDistance(p, tknOpenBrace, 1) == 1) ||
 		// key(params){
-		(realDistance(p, tknValue) == 0 && realDistance(p, tknOpenBracket) == 1)
+		(realDistance(p, tknValue, 1) == 0 && realDistance(p, tknOpenBracket, 1) == 1)
 }
 
 // closures are just }
 func isElementClosure(p *parser) bool {
-	return realDistance(p, tknCloseBrace) == 0
+	return realDistance(p, tknCloseBrace, 1) == 0
 }
 
 // must be run last to exclude other possibilities
 func isTextAlias(p *parser) bool {
-	return realDistance(p, tknValue) == 0
+	return realDistance(p, tknValue, 1) == 0
 }
 
 // alias x : key = value
 func isFieldAlias(p *parser) bool {
-	return p.lexer.tokenString(p.peek(p.index)) == alias &&
-		p.peek(p.index+2).tkntype == tknColon &&
-		p.peek(p.index+4).tkntype == tknAssign
-}
-
-// alias divs : divs(){}
-func isElementAlias(p *parser) bool {
-	return (p.lexer.tokenString(p.peek(p.index)) == alias &&
-		p.peek(p.index+1).tkntype == tknValue &&
-		p.peek(p.index+2).tkntype == tknColon)
-}
-
-func isPrototypeField(p *parser) bool {
-	fmt.Printf("d: %d, %d\n", realDistance(p, tknValue), realDistance(p, tknColon))
-	// key : value
-	return (realDistance(p, tknValue) == 0 && realDistance(p, tknColon) == 1) ||
-		// <key> : value
-		(realDistance(p, tknOpenCorner) == 0 && realDistance(p, tknColon) == 3) ||
-		// <3:key> : value
-		(realDistance(p, tknOpenCorner) == 0 && realDistance(p, tknColon) == 5) ||
-		// <key:3> : value is the same as above
-		// <3:key:5> : value
-		(realDistance(p, tknOpenCorner) == 0 && realDistance(p, tknColon) == 7)
-}
-
-// currently won't work:
-// <3:int|string:3>(){}
-func isPrototypeElement(p *parser) bool {
-
-	// key {}
-	return (realDistance(p, tknValue) == 0 && realDistance(p, tknOpenBrace) == 1) ||
-		//key(){}
-		(realDistance(p, tknValue) == 0 && realDistance(p, tknOpenBracket) == 1) ||
-		// <key>{}
-		(realDistance(p, tknOpenCorner) == 0 && realDistance(p, tknOpenBrace) == 3) ||
-		// <key|k>(){}
-		(realDistance(p, tknOpenCorner) == 0 && realDistance(p, tknOpenBracket) == 3) ||
-		// <3:string|int>{}
-		(realDistance(p, tknOpenCorner) == 0 && realDistance(p, tknOpenBrace) == 6)
+	return isAlias(p) && isPrototypeFieldWithOffset(p, 3, 2)
 }
 
 func isAlias(p *parser) bool {
-	return realDistance(p, tknValue) == 0
+	return p.lexer.tokenString(p.peek(p.index)) == "alias" &&
+		realDistance(p, tknValue, 2) == 1 &&
+		realDistance(p, tknAssign, 1) == 2
+}
+
+// alias divs = divs(){}
+func isElementAlias(p *parser) bool {
+	return isAlias(p) && isPrototypeElementWithOffset(p, 3, 2)
+}
+
+func isPrototypeField(p *parser) bool {
+	return isPrototypeFieldWithOffset(p, 0, 0)
+}
+
+// extra is the number of "extra" values (alias x =) = 2
+func isPrototypeFieldWithOffset(p *parser, offset int, extra int) bool {
+	// key : value
+	return (realDistance(p, tknValue, 1+extra) == offset && realDistance(p, tknColon, 1) == 1+offset) ||
+		// <key> : value
+		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknColon, 1) == 3+offset) ||
+		// <3:key> : value
+		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknColon, 2) == 5+offset) ||
+		// <key:3> : value is the same as above
+		// <3:key:5> : value
+		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknColon, 3) == 7+offset)
+}
+
+func isPrototypeElement(p *parser) bool {
+	return isPrototypeElementWithOffset(p, 0, 0)
+}
+
+// extra is the number of "extra" values (alias x =) = 2
+func isPrototypeElementWithOffset(p *parser, offset int, extra int) bool {
+
+	// key {}
+	return (realDistance(p, tknValue, 1+extra) == offset && realDistance(p, tknOpenBrace, 1) == 1+offset) ||
+		//key(){}
+		(realDistance(p, tknValue, 1+extra) == offset && realDistance(p, tknOpenBracket, 1) == 1+offset) ||
+		// <key>{}
+		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknOpenBrace, 1) == 3+offset) ||
+		// <key|k>(){}
+		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknOpenBracket, 1) == 3+offset) ||
+		// <3:string|int>{}
+		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknOpenBrace, 1) == 5+offset) ||
+		// <3:string|int:3>{}
+		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknOpenBrace, 1) == 7+offset) ||
+		// <3:string>(){} or <string:3>(){}
+		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknOpenBracket, 1) == 5+offset) ||
+		// <3:string|int:3>(){}
+		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknOpenBracket, 1) == 7+offset)
+
+}
+
+func isDiscoveredAlias(p *parser) bool {
+	return realDistance(p, tknValue, 1) == 0
 }

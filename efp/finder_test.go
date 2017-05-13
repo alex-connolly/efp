@@ -1,6 +1,9 @@
 package efp
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestIsPrototypeField(t *testing.T) {
 	p := &parser{lexer: lex([]byte("name : string"))}
@@ -36,6 +39,20 @@ func TestIsPrototypeElement(t *testing.T) {
 	assert(t, isPrototypeElement(p), "maximum element failed")
 	p = &parser{lexer: lex([]byte("<3:name:3> {}"))}
 	assert(t, isPrototypeElement(p), "fixed element failed")
+
+	p = &parser{lexer: lex([]byte("<3:name>(){}"))}
+	assert(t, isPrototypeElement(p), "minimum empty parameterised element failed")
+	p = &parser{lexer: lex([]byte("<name:3>(){}"))}
+	assert(t, isPrototypeElement(p), "maximum empty parameterised element failed")
+	p = &parser{lexer: lex([]byte("<3:name:3>(){}"))}
+	assert(t, isPrototypeElement(p), "fixed emptyparameterised element failed")
+
+	p = &parser{lexer: lex([]byte("<3:name>(int, string){}"))}
+	assert(t, isPrototypeElement(p), "minimum parameterised element failed")
+	p = &parser{lexer: lex([]byte("<name:3>(int, string){}"))}
+	assert(t, isPrototypeElement(p), "maximum parameterised element failed")
+	p = &parser{lexer: lex([]byte("<3:name:3>(int, string){}"))}
+	assert(t, isPrototypeElement(p), "fixed parameterised element failed")
 }
 
 func TestIsFieldAlias(t *testing.T) {
@@ -89,15 +106,14 @@ func TestIsElementAlias(t *testing.T) {
 	p = &parser{lexer: lex([]byte("alias x = <name|int|string:3>(int){}"))}
 	assert(t, isElementAlias(p), "maximum disjunction parameterised element alias failed")
 	p = &parser{lexer: lex([]byte("alias x = <3:name|int|string:3>(int){}"))}
-	assert(t, isElementAlias(p), "fixed disjunction parameterised element alias failed")
+	assert(t, isElementAlias(p), "disjunction parameterised element alias failed")
 	p = &parser{lexer: lex([]byte(`alias x = <3:name|"a-zA-Z"|string:3>(int){}`))}
-	assert(t, isElementAlias(p), "fixed regex disjunction parameterised element alias failed")
+	assert(t, isElementAlias(p), "regex disjunction parameterised element alias failed")
 }
 
 func TestIsField(t *testing.T) {
 
 	p := &parser{lexer: lex([]byte("name = 6"))}
-	t.Logf("dist: %d\n", realDistance(p, tknAssign))
 	assert(t, isField(p), "int field failed")
 	p = &parser{lexer: lex([]byte(`name = "www"`))}
 	assert(t, isField(p), "string field failed")
@@ -131,10 +147,26 @@ func TestIsOperator(t *testing.T) {
 }
 
 func TestIsDistant(t *testing.T) {
+
 	p := &parser{lexer: lex([]byte("alias x = <3:name|int|string:3>(int){}"))}
-	t.Logf("distance: %d", realDistance(p, tknOpenCorner))
-	assert(t, realDistance(p, tknOpenCorner) != 4, "wrong corner distance")
-	assert(t, realDistance(p, tknOpenBracket) != 9, "wronf bracket distance")
+	assert(t, realDistance(p, tknOpenCorner, 1) == 3,
+		fmt.Sprintf("wrong corner distance: %d", realDistance(p, tknOpenCorner, 1)))
+	assert(t, realDistance(p, tknOpenBracket, 1) == 10,
+		fmt.Sprintf("wrong bracket distance: %d", realDistance(p, tknOpenBracket, 1)))
+
+	p = &parser{lexer: lex([]byte("alias x = <3: name | int | string :3>(int){}"))}
+	assert(t, realDistance(p, tknOpenCorner, 1) == 3,
+		fmt.Sprintf("wrong corner distance: %d", realDistance(p, tknOpenCorner, 1)))
+	assert(t, realDistance(p, tknOpenBracket, 1) == 10,
+		fmt.Sprintf("wrong bracket distance: %d", realDistance(p, tknOpenBracket, 1)))
+
+	// empty bytes
+	p = &parser{lexer: lex([]byte(""))}
+	assert(t, realDistance(p, tknValue, 1) == -1, "failed empty")
+
+	p = &parser{lexer: lex([]byte("ALIAS1 ALIAS2"))}
+	assert(t, realDistance(p, tknValue, 1) == 0, "failed alias")
+
 }
 
 func TestIsTextAlias(t *testing.T) {
@@ -146,7 +178,12 @@ func TestIsTextAlias(t *testing.T) {
 	assert(t, isTextAlias(p), "string text alias failed")
 }
 
+func TestIsAlias(t *testing.T) {
+	p := &parser{lexer: lex([]byte("alias x ="))}
+	assert(t, isAlias(p), "not an alias")
+}
+
 func TestIsDiscoveredAlias(t *testing.T) {
 	p := &parser{lexer: lex([]byte("hello"))}
-	assert(t, isAlias(p), "discovered alias failed")
+	assert(t, isDiscoveredAlias(p), "discovered alias failed")
 }
