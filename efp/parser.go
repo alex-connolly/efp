@@ -88,13 +88,43 @@ func (p *parser) peek(offset int) token {
 }
 
 func parseField(p *parser) {
-	fmt.Printf("here lads\n")
 	f := new(field)
 	f.key = p.lexer.tokenString(p.next())
-	p.next() // eat =
+	p.enforceNext(tknAssign, "Expected '='") // eat =
 	f.value = new(fieldValue)
 	p.parseFieldValue(f.value)
 	p.addField(f.key, f)
+}
+
+func (p *parser) parseFieldValue(fv *fieldValue) {
+	switch p.current().tkntype {
+	case tknOpenSquare:
+		p.parseArrayDeclaration(fv)
+		break
+	case tknValue:
+		fv.addChild(p.lexer.tokenString(p.next()))
+		break
+	}
+}
+
+func (p *parser) parseArrayDeclaration(fv *fieldValue) {
+	p.next() // eat [
+	fv.isArray = true
+	for p.current().tkntype != tknCloseSquare {
+		if p.current().tkntype == tknValue {
+			fv.addChild(p.lexer.tokenString(p.current()))
+		} else {
+			p.addError("Invalid token in array declaration")
+		}
+		if p.current().tkntype != tknCloseSquare {
+			if p.current().tkntype == tknComma {
+				p.next()
+			} else {
+				p.addError("Invalid token in array declaration")
+			}
+		}
+	}
+	p.next() // eat ]
 }
 
 func (fv *fieldValue) addChild(regex string) {
@@ -107,10 +137,10 @@ func (fv *fieldValue) addChild(regex string) {
 	fv.children = append(fv.children, val)
 }
 
-func (p *parser) parseFieldValue(fv *fieldValue) {
+func (p *parser) parsePrototypeFieldValue(fv *fieldValue) {
 	switch p.current().tkntype {
 	case tknOpenSquare:
-		p.parseArrayDeclaration(fv)
+		p.parsePrototypeArrayDeclaration(fv)
 		break
 	case tknValue:
 		fv.addChild(p.lexer.tokenString(p.next()))
@@ -121,35 +151,35 @@ func (p *parser) parseFieldValue(fv *fieldValue) {
 	}
 	if p.current().tkntype == tknOr {
 		p.next()
-		p.parseFieldValue(fv)
+		p.parsePrototypeFieldValue(fv)
 	}
 }
 
-func (p *parser) parseArrayDeclaration(fv *fieldValue) {
-	p.next() // eat [
+func (p *parser) parsePrototypeArrayDeclaration(fv *fieldValue) {
+	p.enforceNext(tknOpenSquare, "Expected '['") // eat [
 	fv.isArray = true
 	if p.current().tkntype == tknNumber {
 		num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
 		fv.min = num
-		p.next() // eat ":"
+		p.enforceNext(tknColon, "Array minimum must be followed by ':'") // eat ":"
 	}
-	p.parseFieldValue(fv)
+	p.parsePrototypeFieldValue(fv)
 	if p.index >= len(p.lexer.tokens) {
 		return
 	}
 	if p.current().tkntype == tknColon {
-		p.next() // eat ":"
+		p.enforceNext(tknColon, "Array minimum must be followed by ':'") // eat ":"
 		num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
 		fv.max = num
 	}
-	p.next() // eat ]
+	p.enforceNext(tknCloseSquare, "Expected ']'") // eat ]
 }
 
 func parseElement(p *parser) {
 	e := new(element)
 	e.key = p.lexer.tokenString(p.next())
-	p.parseParameters()
-	p.next() // eat {
+	p.parseParameters(e)
+	p.enforceNext(tknOpenBrace, "Expected '{'") // eat {
 	p.addElement(e.key, e)
 }
 
@@ -157,11 +187,11 @@ func parseFieldAlias(p *parser) {
 	f := new(field)
 	p.next() // eat "alias"
 	f.alias = p.lexer.tokenString(p.next())
-	p.next() // eat "="
+	p.enforceNext(tknAssign, "Expected '='") // eat "="
 	f.key = p.lexer.tokenString(p.next())
-	p.next() // eat ":"
+	p.enforceNext(tknColon, "Expected ':'") // eat ":"
 	f.value = new(fieldValue)
-	p.parseFieldValue(f.value)
+	p.parsePrototypeFieldValue(f.value)
 	p.addFieldAlias(f)
 }
 
@@ -169,20 +199,19 @@ func parseElementAlias(p *parser) {
 	e := new(element)
 	p.next() // eat "alias"
 	e.alias = p.lexer.tokenString(p.next())
-	p.next() // eat "="
+	p.enforceNext(tknAssign, "Expected '='") // eat "="
 	e.key = p.lexer.tokenString(p.next())
 	p.parsePrototypeParameters(e)
-	p.next() // eat "{"
+	p.enforceNext(tknOpenBrace, "Expected '{'") // eat "{"
 	p.addElementAlias(e)
 }
 
 func parsePrototypeField(p *parser) {
-	fmt.Printf("here lads\n")
 	f := new(field)
 	f.key = p.lexer.tokenString(p.next())
-	p.next() // eat :
+	p.enforceNext(tknColon, "Expected ':'") // eat :
 	f.value = new(fieldValue)
-	p.parseFieldValue(f.value)
+	p.parsePrototypeFieldValue(f.value)
 	p.addPrototypeField(f)
 }
 
@@ -190,7 +219,7 @@ func parsePrototypeElement(p *parser) {
 	e := new(element)
 	e.key = p.lexer.tokenString(p.next())
 	p.parsePrototypeParameters(e)
-	p.next()
+	p.enforceNext(tknOpenBrace, "Expected '{'") // eat {
 	p.addPrototypeElement(e)
 }
 
@@ -199,7 +228,7 @@ func (p *parser) parsePrototypeParameters(e *element) {
 	if p.current().tkntype != tknOpenBracket {
 		return
 	}
-	p.next() // eat "("
+	p.enforceNext(tknOpenBracket, "Parameters must open with '('") // eat "("
 	for p.current().tkntype != tknCloseBracket {
 		switch p.current().tkntype {
 		case tknComma:
@@ -210,7 +239,7 @@ func (p *parser) parsePrototypeParameters(e *element) {
 			break
 		}
 	}
-	p.next() // eat ")"
+	p.enforceNext(tknCloseBracket, "Parameters must close with '('") // eat ")"
 }
 
 func (p *parser) parsePrototypeParameter() {
@@ -218,7 +247,7 @@ func (p *parser) parsePrototypeParameter() {
 		p.prototype.parameters = make([]*fieldValue, 0)
 	}
 	fv := new(fieldValue)
-	p.parseFieldValue(fv)
+	p.parsePrototypeFieldValue(fv)
 	p.prototype.parameters = append(p.prototype.parameters, fv)
 }
 
@@ -300,12 +329,11 @@ func (p *parser) importParseConstructs() {
 
 func parsePrototypeFieldAlias(p *parser) {
 	f := new(field)
-	p.next() // eat the alias keyword
+	p.enforceNext(tknValue, "Expected alias keyword") // eat the alias keyword (kw not verified)
 	f.key = p.lexer.tokenString(p.next())
-	// eat =
-	p.next()
+	p.enforceNext(tknAssign, "Expected '='") // eat =
 	f.value = new(fieldValue)
-	p.parseFieldValue(f.value)
+	p.parsePrototypeFieldValue(f.value)
 	p.addFieldAlias(f)
 }
 
@@ -319,12 +347,28 @@ func (p *parser) next() token {
 	return t
 }
 
-func (p *parser) parseParameters() {
+func (p *parser) enforceNext(tokType tokenType, err string) token {
+	t := p.current()
+	p.index++
+	if t.tkntype != tokType {
+		p.addError(err)
+	}
+	return t
+}
+
+func (p *parser) parseParameters(e *element) {
 	// handle case where no parameters
 	if p.current().tkntype != tknOpenBrace {
 		return
 	}
 	p.next() // eat "("
+	for p.current().tkntype != tknCloseBrace {
+		if p.current().tkntype == tknValue {
+
+		} else {
+
+		}
+	}
 	p.next() // eat ")"'
 }
 
