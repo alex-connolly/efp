@@ -3,6 +3,7 @@ package efp
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 )
 
@@ -93,7 +94,7 @@ func parseField(p *parser) {
 	p.next() // eat =
 	f.value = new(fieldValue)
 	p.parseFieldValue(f.value)
-	p.addField(f)
+	p.addField(f.key, f)
 }
 
 func (fv *fieldValue) addChild(regex string) {
@@ -149,7 +150,7 @@ func parseElement(p *parser) {
 	e.key = p.lexer.tokenString(p.next())
 	p.parseParameters()
 	p.next() // eat {
-	p.addElement(e)
+	p.addElement(e.key, e)
 }
 
 func parseFieldAlias(p *parser) {
@@ -232,7 +233,6 @@ func (p *parser) addPrototypeElement(e *element) {
 }
 
 func (p *parser) addPrototypeField(f *field) {
-	fmt.Printf("adding field\n")
 	if p.prototype.fields == nil {
 		p.prototype.fields = make(map[string][]*field)
 	}
@@ -243,45 +243,45 @@ func (p *parser) addPrototypeField(f *field) {
 }
 
 func (p *parser) addFieldAlias(f *field) {
-	if p.prototype == nil {
-		fmt.Printf("prototype is nil\n")
-		return
-	}
 	if p.prototype.declaredFieldAliases == nil {
-		p.prototype.declaredFieldAliases = make(map[string][]*field)
+		p.prototype.declaredFieldAliases = make(map[string]*field)
 	}
-	if p.prototype.declaredFieldAliases[f.alias] == nil {
-		p.prototype.declaredFieldAliases[f.alias] = make([]*field, 0)
+	if p.prototype.declaredFieldAliases[f.alias] != nil {
+		p.addError(fmt.Sprintf(errDuplicateAlias, f.alias, p.prototype.key))
+	} else {
+		p.prototype.declaredFieldAliases[f.alias] = f
 	}
-	p.prototype.declaredFieldAliases[f.alias] = append(p.prototype.declaredFieldAliases[f.alias], f)
 }
 
 func (p *parser) addElementAlias(e *element) {
 	if p.prototype.declaredElementAliases == nil {
-		p.prototype.declaredElementAliases = make(map[string][]*element)
+		p.prototype.declaredElementAliases = make(map[string]*element)
 	}
-	if p.prototype.declaredElementAliases[e.alias] == nil {
-		p.prototype.declaredElementAliases[e.alias] = make([]*element, 0)
+	if p.prototype.declaredElementAliases[e.alias] != nil {
+		p.addError(fmt.Sprintf(errDuplicateAlias, e.alias, p.prototype.key))
+	} else {
+		p.prototype.declaredElementAliases[e.alias] = e
 	}
-	p.prototype.declaredElementAliases[e.alias] = append(p.prototype.declaredElementAliases[e.alias], e)
 }
 
-func (p *parser) addElement(e *element) {
+func (p *parser) addElement(key string, e *element) {
 	if p.scope.elements == nil {
 		p.scope.elements = make(map[string][]*element)
 	}
-	if p.scope.elements[e.key] == nil {
-		p.scope.elements[e.key] = make([]*element, 0)
+	if p.scope.elements[key] == nil {
+		p.scope.elements[key] = make([]*element, 0)
 	}
-	p.scope.elements[e.key] = append(p.scope.elements[e.key], e)
+	p.scope.elements[key] = append(p.scope.elements[key], e)
 }
 
-func (p *parser) addField(f *field) {
-	if p.scope.fields[f.key] == nil {
-		p.scope.fields[f.key] = append(p.scope.fields[f.key], f)
-	} else {
-		p.errs = append(p.errs, fmt.Sprintf("Duplicate field %s in prototype (max %d)", f.key, 1))
+func (p *parser) addField(key string, f *field) {
+	if p.scope.fields == nil {
+		p.scope.fields = make(map[string][]*field)
 	}
+	if p.scope.fields[f.key] == nil {
+		p.scope.fields[f.key] = make([]*field, 0)
+	}
+	p.scope.fields[f.key] = append(p.scope.fields[f.key], f)
 }
 
 func parseElementClosure(p *parser) {
@@ -336,4 +336,20 @@ func (p *parser) importPrototypeConstructs() {
 		construct{"prototype element", isPrototypeElement, parsePrototypeElement},
 		construct{"element closure", isElementClosure, parseElementClosure},
 	}
+}
+
+func (p *parser) compileRegex(regex string) *regexp.Regexp {
+	r, e := regexp.Compile(regex)
+	if e != nil {
+		p.addError("Failed to compile regex")
+		return nil
+	}
+	return r
+}
+
+func (p *parser) addError(err string) {
+	if p.errs == nil {
+		p.errs = make([]string, 0)
+	}
+	p.errs = append(p.errs, err)
 }

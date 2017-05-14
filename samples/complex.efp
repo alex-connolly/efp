@@ -1,17 +1,17 @@
 alias x = bool
 
 complex {
-    
+
     // stored as fv(true, string)
-    simple = [string] // only strings or ints
+    simple : [string] // only strings or ints
     // stored as fv(true, string) fv(true, int)
-    harder = [string]|[int]
+    harder : [string]|[int]
     // stored as fv(true(fv(true, string), fv(true, int)))
-    mixed = [string|int]
+    mixed : [string|int]
     // stored as fv(true, fv(true, string))
-    twod = [[string]] // two-d array
+    twod : [[string]] // two-d array
     // stored as fv(true, fv(false, string), fv(true, string))
-    harder_mixed = [string|[string]]
-    limits = [string|[3:string:5]]
-    complex = [string|[3:string:5]|[[int]]||[x|"a-zA-Z"|[bool]]]
+    harder_mixed : [string|[string]]
+    limits : [string|[3:string:5]]
+    complex : [string|[3:string:5]|[[int]]||[x|"a-zA-Z"|[bool]]]
 }

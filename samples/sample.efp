@@ -1,11 +1,11 @@
 alias STR = string
 
 alias hi = here {
-    ffa = STR
+    ffa : STR
     hi
 }
 
 element {
-    field = int
+    field : int
     hi
 }

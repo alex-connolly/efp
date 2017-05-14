@@ -6,12 +6,13 @@ func TestParseSimpleField(t *testing.T) {
 	p := basicParser("name : string")
 	// valid example
 	p.parseString(`name = "ender"`)
+	parseField(p)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, len(p.scope.fields["name"]) == 1, "field length wrong")
 	assertNow(t, p.scope.fields["name"][0] != nil, "name nil")
 	assertNow(t, len(p.scope.fields["name"][0].value.children) == 1, "wrong children number")
-	assert(t, p.scope.fields["name"][0].value.children[0].value == "ender", "invalid value")
+	assert(t, p.scope.fields["name"][0].value.children[0].value == "ender", "invalid value "+p.scope.fields["name"][0].value.children[0].value)
 	// invalid example
 	p.parseString(`name = ender`)
 	assert(t, p.errs != nil, "errs should not be nil")

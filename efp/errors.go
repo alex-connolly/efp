@@ -5,6 +5,7 @@ package efp
 
 // Errors during prototype generation.
 const (
+	errDuplicateAlias  = "Alias %s already declared in scope %s."
 	errAliasNotVisible = "Alias %s discovered in element %s not found."
 	errUnclosedArray   = "Array declaration in field %s is incomplete."
 )

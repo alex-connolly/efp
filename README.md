@@ -241,15 +241,42 @@ The same syntax is valid for fields, e.g:
 
 Note that the above declaration is identical to ```go <2:key:3> = string```, but the latter is validated through string equality instead of regex.
 
+## Regex Overlaps
+
+There is significant potential for error when dealing with field frequency in the following prototype:
+
+```go
+parent {
+    "a-zA-Z" : string
+    name : string
+}
+```
+
+As ```name``` matches the regex of the earlier field, there is a chance it would be evaluated as such.
+
+This gives rise to the issue of competing regex strings, e.g.:
+
+```go
+parent {
+    "a-zA-Z" : string
+    "a-z" : string
+}
+```
+
+Of course, it would be possible to assign the field to the "best" or "simplest" regex key (by whatever metric), but this would result in additional overhead for each regex declaration, as well as ambiguity regarding these complexity comparisons. The expected behaviour, therefore, is to assign to the first matched regex. As the regexes are stored in a map (and therefore in an arbitrary order), this allocation is pseudo-random, and should NOT be relied upon or predicted. The best solution, therefore, is to avoid overlapping regex declarations within an element. 
+
+NOTE: This may change in the future, depending on feedback, or may become an option.
+
 ## Errors
 
-| Error      | Description         |
+| Error      | Explanation        |
 | :-------------: |:-------------:|
 | Alias Not Found | The alias is not visible in the current scope. |
 | Duplicate Element |    |
 | Duplicate Field |     |
 | Invalid Token |     |
 | Invalid Regex | The string specified cannot be transformed into golang regex.   |
+| Duplicate Alias | The following alias has already been declared in the current element. |
 
 ## Full Example
 

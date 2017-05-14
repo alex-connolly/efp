@@ -33,10 +33,10 @@ type element struct {
 	key                      string
 	parameters               []*fieldValue
 	declaredTextAliases      map[string]string
-	discoveredElementAliases map[string][]*element
-	declaredElementAliases   map[string][]*element
+	discoveredElementAliases map[string]*element
+	declaredElementAliases   map[string]*element
 	elements                 map[string][]*element
 	fields                   map[string][]*field
-	discoveredFieldAliases   map[string][]*field
-	declaredFieldAliases     map[string][]*field
+	discoveredFieldAliases   map[string]*field
+	declaredFieldAliases     map[string]*field
 }

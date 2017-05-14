@@ -64,3 +64,9 @@ func TestLexerTokenLengths(t *testing.T) {
 	l := lex([]byte("alias x : y = 5"))
 	assert(t, len(l.tokens) == 6, "wrong token number")
 }
+
+func TestLexerStrings(t *testing.T) {
+	l := lex([]byte(`"name" = "ender"`))
+	assert(t, l.tokenString(l.tokens[0]) == "name", "wrong string")
+	assert(t, l.tokenString(l.tokens[2]) == "ender", "wrong string "+l.tokenString(l.tokens[2]))
+}
