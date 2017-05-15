@@ -1,17 +1,22 @@
 package efp
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestParseSimpleFieldValid(t *testing.T) {
 	p := basicParser("name : string")
 	// valid example
 	p.parseString(`name = "ender"`)
 	parseField(p)
+	fmt.Printf("Got her2e\n")
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, len(p.scope.fields["name"]) == 1, "field length wrong")
 	assertNow(t, p.scope.fields["name"][0] != nil, "name nil")
 	assertNow(t, len(p.scope.fields["name"][0].value.children) == 1, "wrong children number")
+
 	assert(t, p.scope.fields["name"][0].value.children[0].value == "ender", "invalid value "+p.scope.fields["name"][0].value.children[0].value)
 
 }
@@ -28,7 +33,6 @@ func TestParseArrayFieldValid(t *testing.T) {
 	p.prototypeString("name : [string]")
 	p.parseString(`name = ["ender", "me"]`)
 	assert(t, p.errs == nil, "errs should be nil")
-
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, p.scope.fields["name"] != nil, "fields should not be nil")
 	assert(t, p.scope.fields["name"][0].value.children[0].value == "ender", "invalid value 0")

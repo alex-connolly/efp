@@ -5,6 +5,7 @@ type tokenType int
 const (
 	tknValue = iota
 	tknNumber
+	tknString
 	tknComment
 	tknAlias
 	tknAssign

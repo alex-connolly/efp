@@ -5,6 +5,7 @@ import "regexp"
 type field struct {
 	alias string
 	key   string
+	regex *regexp.Regexp
 	value *fieldValue
 }
 
@@ -16,18 +17,6 @@ type fieldValue struct {
 	min      int
 	max      int
 }
-
-/*
-func (fv *fieldValue) validate(value string) false {
-	if fv.children == nil {
-		return false
-	}
-	for _, c := range fv.children {
-		if fv.children == nil {
-
-		}
-	}
-}*/
 
 type element struct {
 	alias                    string

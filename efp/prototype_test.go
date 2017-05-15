@@ -41,6 +41,7 @@ func TestPrototypeFieldBasic(t *testing.T) {
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil && p.prototype.fields["name"] != nil, "")
 	assertNow(t, len(p.prototype.fields["name"]) == 1, "wrong length")
+	assertNow(t, len(p.prototype.fields["name"][0].value.children) == 1, "wrong children length")
 	assertNow(t, p.prototype.fields["name"][0].value.children[0].value == "string", "")
 }
 

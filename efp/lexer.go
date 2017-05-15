@@ -77,7 +77,7 @@ func processIgnored(l *lexer) token {
 func processNumber(l *lexer) (t token) {
 	t.start = l.offset
 	t.end = l.offset
-	t.tkntype = tknValue
+	t.tkntype = tknNumber
 	for '0' <= l.buffer[l.offset] && l.buffer[l.offset] <= '9' {
 		l.offset++
 		t.end++
@@ -115,9 +115,10 @@ func processString(l *lexer) token {
 	// the start - end is the value
 	// it does NOT include the enclosing quotation marks
 	t := new(token)
-	t.start = l.offset + 1
+	t.start = l.offset
 	t.end = l.offset
-	t.tkntype = tknValue
+	t.start++
+	t.tkntype = tknString
 	b := l.nextByte()
 	b2 := l.nextByte()
 	for b != b2 {

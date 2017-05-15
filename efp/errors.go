@@ -8,6 +8,7 @@ const (
 	errDuplicateAlias  = "Alias %s already declared in scope %s."
 	errAliasNotVisible = "Alias %s discovered in element %s not found."
 	errUnclosedArray   = "Array declaration in field %s is incomplete."
+	errInvalidRegex    = "Invalid regex string %s in element %s."
 )
 
 // Errors during parsing.

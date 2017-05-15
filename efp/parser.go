@@ -87,17 +87,23 @@ func (p *parser) peek(offset int) token {
 	return p.lexer.tokens[offset]
 }
 
+func isValue(t tokenType) bool {
+	return (t == tknValue) || (t == tknNumber) || (t == tknString)
+}
+
 func (p *parser) validateKey(key string) string {
-	for k := range p.prototype.fields {
+	for k, v := range p.prototype.fields {
+		fmt.Printf("key: %s, regex: %p\n", k, v[0].regex)
 		if k == key {
+			fmt.Printf("found\n")
 			return k
-		} else if p.prototype.regex != nil {
-			if p.prototype.regex.MatchString(key) {
+		} else if v[0].regex != nil {
+			if v[0].regex.MatchString(key) {
 				return k
 			}
 		}
 	}
-	p.addError(fmt.Sprintf("Key %s not matched in prototype element %s", key, p.scope.key))
+	p.addError(fmt.Sprintf("Key %s not matched in prototype element %s", key, p.prototype.key))
 	return ""
 }
 
@@ -108,8 +114,8 @@ func parseField(p *parser) {
 	p.enforceNext(tknAssign, "Expected '='") // eat =
 	f.value = new(fieldValue)
 	p.parseFieldValue(f.value)
-	p.validateField(f.value, p.prototype.fields[key][0].value)
-	p.addField(f.key, f)
+	p.validateField(f.value)
+	p.addField(key, f)
 }
 
 func (p *parser) parseFieldValue(fv *fieldValue) {
@@ -118,6 +124,8 @@ func (p *parser) parseFieldValue(fv *fieldValue) {
 		p.parseArrayDeclaration(fv)
 		break
 	case tknValue:
+	case tknString:
+	case tknNumber:
 		fv.addChild(p.lexer.tokenString(p.next()))
 		break
 	}
@@ -127,7 +135,7 @@ func (p *parser) parseArrayDeclaration(fv *fieldValue) {
 	p.next() // eat [
 	fv.isArray = true
 	for p.current().tkntype != tknCloseSquare {
-		if p.current().tkntype == tknValue {
+		if isValue(p.current().tkntype) {
 			fv.addChild(p.lexer.tokenString(p.current()))
 		} else {
 			p.addError("Invalid token in array declaration")
@@ -159,6 +167,8 @@ func (p *parser) parsePrototypeFieldValue(fv *fieldValue) {
 		p.parsePrototypeArrayDeclaration(fv)
 		break
 	case tknValue:
+	case tknNumber:
+	case tknString:
 		fv.addChild(p.lexer.tokenString(p.next()))
 		break
 	}
@@ -223,8 +233,19 @@ func parseElementAlias(p *parser) {
 }
 
 func parsePrototypeField(p *parser) {
+	fmt.Printf("parsing field\n")
 	f := new(field)
-	f.key = p.lexer.tokenString(p.next())
+	f.key = p.lexer.tokenString(p.current())
+	if p.next().tkntype == tknString {
+		fmt.Printf("parsing ##\n")
+		r, err := regexp.Compile(f.key)
+		if err != nil {
+			fmt.Printf("parsing err\n")
+			p.addError(fmt.Sprintf(errInvalidRegex, f.key, p.prototype.key))
+		}
+		f.regex = r
+		fmt.Printf("regex ptr: %p\n", f.regex)
+	}
 	p.enforceNext(tknColon, "Expected ':'") // eat :
 	f.value = new(fieldValue)
 	p.parsePrototypeFieldValue(f.value)
@@ -251,6 +272,7 @@ func (p *parser) parsePrototypeParameters(e *element) {
 			p.next()
 			break
 		case tknValue:
+		case tknString:
 			p.parsePrototypeParameter()
 			break
 		}
@@ -398,46 +420,8 @@ func (p *parser) importPrototypeConstructs() {
 	}
 }
 
-func (p *parser) compileRegex(regex string) *regexp.Regexp {
-	r, e := regexp.Compile(regex)
-	if e != nil {
-		p.addError("Failed to compile regex")
-		return nil
-	}
-	return r
-}
-
-func (p *parser) validateFieldItem(c *fieldValue, prototype *fieldValue) bool {
-	if c.value != "" {
-		validated := false
-		for _, pc := range prototype.children {
-			if pc.value == "" {
-				return false
-			} else {
-				r, _ := regexp.Compile(pc.value)
-				if r.MatchString(c.value) {
-					validated = true
-				}
-			}
-		}
-		return validated
-	} else {
-		return p.validateFieldItem(c, prototype) // probably wrong
-	}
-
-}
-
-func (p *parser) validateField(test *fieldValue, prototype *fieldValue) bool {
-	if test.isArray {
-		if !prototype.isArray {
-			return false
-		} else {
-			for _, c := range test.children {
-				p.validateFieldItem(c, prototype)
-			}
-		}
-	}
-	return false
+func (p *parser) validateField(c *fieldValue) bool {
+	return true
 }
 
 func (p *parser) addError(err string) {
