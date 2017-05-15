@@ -58,7 +58,7 @@ func processOperator(tkn tokenType) processorFunc {
 }
 
 func isIdentifier(b byte) bool {
-	return ('A' <= b && b <= 'z') || ('0' <= b && b <= '9') || (b == '_')
+	return ('A' <= b && b <= 'Z') || ('a' <= b && b <= 'z') || ('0' <= b && b <= '9') || (b == '_')
 }
 
 func isNumber(b byte) bool {

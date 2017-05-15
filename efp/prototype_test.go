@@ -82,23 +82,31 @@ func TestPrototypeFieldArray(t *testing.T) {
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil || p.prototype.fields["name"] != nil, "standard shouldn't be nil")
 	assertNow(t, len(p.prototype.fields["name"]) == 1, "standard wrong length")
+}
 
-	p = basicParser("name : [2:string]")
+func TestPrototypeFieldArrayMinimum(t *testing.T) {
+	p := basicParser("name : [2:string]")
+	assertNow(t, len(p.lexer.tokens) == 7, "wrong token length")
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil || p.prototype.fields["name"] != nil, "minimum shouldn't be nil")
 	assertNow(t, len(p.prototype.fields["name"]) == 1, "minimum wrong length")
+}
 
-	p = basicParser("name : [string:2]")
+func TestPrototypeFieldArrayMaximum(t *testing.T) {
+	p := basicParser("name : [string:2]")
+	assertNow(t, len(p.lexer.tokens) == 7, "wrong token length")
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil || p.prototype.fields["name"] != nil, "maximum shouldn't be nil")
 	assertNow(t, len(p.prototype.fields["name"]) == 1, "maximum wrong length")
+}
 
-	p = basicParser("name : [2:string:2]")
+func TestPrototypeFieldArrayFixed(t *testing.T) {
+	p := basicParser("name : [2:string:2]")
+	assertNow(t, len(p.lexer.tokens) == 9, "wrong token length")
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil || p.prototype.fields["name"] != nil, "fixed shouldn't be nil")
 	assertNow(t, len(p.prototype.fields["name"]) == 1, "fixed wrong length")
-
 }

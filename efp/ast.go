@@ -1,5 +1,7 @@
 package efp
 
+import "regexp"
+
 type field struct {
 	alias string
 	key   string
@@ -29,6 +31,7 @@ func (fv *fieldValue) validate(value string) false {
 
 type element struct {
 	alias                    string
+	regex                    *regexp.Regexp
 	parent                   *element
 	key                      string
 	parameters               []*fieldValue

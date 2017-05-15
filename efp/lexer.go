@@ -49,6 +49,10 @@ func (l *lexer) nextByte() byte {
 	return b
 }
 
+func lexString(str string) *lexer {
+	return lex([]byte(str))
+}
+
 func lex(bytes []byte) *lexer {
 	l := new(lexer)
 	l.buffer = bytes
@@ -95,7 +99,7 @@ func processIdentifier(l *lexer) token {
 	}
 	// we already know the first byte is in id form
 	for isIdentifier(l.buffer[l.offset]) {
-		//fmt.Printf("id: %c\n", l.buffer[l.offset-1])
+		//fmt.Printf("id: %c\n", l.buffer[l.offset])
 		t.end++
 		l.offset++
 		if l.isEOF() {

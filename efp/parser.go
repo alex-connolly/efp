@@ -87,12 +87,28 @@ func (p *parser) peek(offset int) token {
 	return p.lexer.tokens[offset]
 }
 
+func (p *parser) validateKey(key string) string {
+	for k := range p.prototype.fields {
+		if k == key {
+			return k
+		} else if p.prototype.regex != nil {
+			if p.prototype.regex.MatchString(key) {
+				return k
+			}
+		}
+	}
+	p.addError(fmt.Sprintf("Key %s not matched in prototype element %s", key, p.scope.key))
+	return ""
+}
+
 func parseField(p *parser) {
 	f := new(field)
 	f.key = p.lexer.tokenString(p.next())
+	key := p.validateKey(f.key)
 	p.enforceNext(tknAssign, "Expected '='") // eat =
 	f.value = new(fieldValue)
 	p.parseFieldValue(f.value)
+	p.validateField(f.value, p.prototype.fields[key][0].value)
 	p.addField(f.key, f)
 }
 
@@ -168,7 +184,7 @@ func (p *parser) parsePrototypeArrayDeclaration(fv *fieldValue) {
 		return
 	}
 	if p.current().tkntype == tknColon {
-		p.enforceNext(tknColon, "Array minimum must be followed by ':'") // eat ":"
+		p.enforceNext(tknColon, "Array maximum must be preceded by ':'") // eat ":"
 		num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
 		fv.max = num
 	}
@@ -389,6 +405,39 @@ func (p *parser) compileRegex(regex string) *regexp.Regexp {
 		return nil
 	}
 	return r
+}
+
+func (p *parser) validateFieldItem(c *fieldValue, prototype *fieldValue) bool {
+	if c.value != "" {
+		validated := false
+		for _, pc := range prototype.children {
+			if pc.value == "" {
+				return false
+			} else {
+				r, _ := regexp.Compile(pc.value)
+				if r.MatchString(c.value) {
+					validated = true
+				}
+			}
+		}
+		return validated
+	} else {
+		return p.validateFieldItem(c, prototype) // probably wrong
+	}
+
+}
+
+func (p *parser) validateField(test *fieldValue, prototype *fieldValue) bool {
+	if test.isArray {
+		if !prototype.isArray {
+			return false
+		} else {
+			for _, c := range test.children {
+				p.validateFieldItem(c, prototype)
+			}
+		}
+	}
+	return false
 }
 
 func (p *parser) addError(err string) {
