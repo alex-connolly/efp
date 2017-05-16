@@ -49,7 +49,6 @@ func getProtoTokens() []protoToken {
 
 func processOperator(tkn tokenType) processorFunc {
 	return func(l *lexer) (t token) {
-
 		t.start = l.offset
 		t.end = l.offset
 		t.tkntype = tkn
@@ -71,7 +70,7 @@ func isString(b byte) bool {
 }
 
 func isWhitespace(b byte) bool {
-	return (b == ' ') || (b == '\t') || (b == 'r')
+	return (b == ' ') || (b == '\t')
 }
 
 func isNewLine(b byte) bool {

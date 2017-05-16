@@ -97,7 +97,6 @@ func processIdentifier(l *lexer) token {
 	if l.isEOF() {
 		return *t
 	}
-	// we already know the first byte is in id form
 	for isIdentifier(l.buffer[l.offset]) {
 		//fmt.Printf("id: %c\n", l.buffer[l.offset])
 		t.end++

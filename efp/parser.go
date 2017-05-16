@@ -78,6 +78,7 @@ func (p *parser) createPrototypeBytes(bytes []byte) {
 	p.importPrototypeConstructs()
 	p.lexer = lex(bytes)
 	p.prototype = new(element)
+	p.prototype.addStandardAliases()
 }
 
 func (p *parser) createParseBytes(bytes []byte) {
@@ -115,24 +116,29 @@ func (p *parser) validateKey(key string) string {
 	for k, v := range p.prototype.fields {
 		if k == key {
 			return k
-		} else if v[0].regex != nil {
-			if v[0].regex.MatchString(key) {
+		} else if v[0] != nil && v[0].key != nil && v[0].key.regex != nil {
+			if v[0].key.regex.MatchString(key) {
 				return k
 			}
 		}
 	}
-	p.addError(fmt.Sprintf("Key %s not matched in prototype element %s", key, p.prototype.key))
+	if p.prototype.key == nil {
+		p.addError(fmt.Sprintf("Key %s not matched in global scope", key))
+	} else {
+		p.addError(fmt.Sprintf("Key %s not matched in prototype element %s", key, p.prototype.key.key))
+	}
 	return ""
 }
 
 func parseField(p *parser) {
 	f := new(field)
-	f.key = p.lexer.tokenString(p.next())
-	key := p.validateKey(f.key)
+	f.key = new(key)
+	f.key.key = p.lexer.tokenString(p.next())
+	key := p.validateKey(f.key.key)
 	p.enforceNext(tknAssign, "Expected '='") // eat =
 	f.value = new(fieldValue)
 	p.parseFieldValue(f.value)
-	p.validateField(f.value)
+	p.validateField(key, f)
 	p.addField(key, f)
 }
 
@@ -221,10 +227,11 @@ func (p *parser) parsePrototypeArrayDeclaration(fv *fieldValue) {
 
 func parseElement(p *parser) {
 	e := new(element)
-	e.key = p.lexer.tokenString(p.next())
+	e.key = new(key)
+	p.parseKey(e.key)
 	p.parseParameters(e)
 	p.enforceNext(tknOpenBrace, "Expected '{'") // eat {
-	p.addElement(e.key, e)
+	p.addElement(e.key.key, e)
 }
 
 func parseFieldAlias(p *parser) {
@@ -232,7 +239,8 @@ func parseFieldAlias(p *parser) {
 	p.next() // eat "alias"
 	f.alias = p.lexer.tokenString(p.next())
 	p.enforceNext(tknAssign, "Expected '='") // eat "="
-	f.key = p.lexer.tokenString(p.next())
+	f.key = new(key)
+	p.parseKey(f.key)
 	p.enforceNext(tknColon, "Expected ':'") // eat ":"
 	f.value = new(fieldValue)
 	p.parsePrototypeFieldValue(f.value)
@@ -244,22 +252,93 @@ func parseElementAlias(p *parser) {
 	p.next() // eat "alias"
 	e.alias = p.lexer.tokenString(p.next())
 	p.enforceNext(tknAssign, "Expected '='") // eat "="
-	e.key = p.lexer.tokenString(p.next())
+	e.key = new(key)
+	p.parseKey(e.key)
 	p.parsePrototypeParameters(e)
 	p.enforceNext(tknOpenBrace, "Expected '{'") // eat "{"
 	p.addElementAlias(e)
 }
 
+func (p *parser) getPrototypeKey() string {
+	if p.prototype.key == nil {
+		return "global"
+	}
+	return p.prototype.key.key
+}
+
+func (p *parser) parseKeyRegex(k *key) {
+	r, err := regexp.Compile(k.key)
+	if err != nil {
+		p.addError(fmt.Sprintf(errInvalidRegex, k.key, p.getPrototypeKey()))
+	}
+	k.regex = r
+}
+
+func (p *parser) parseKeyMinimum(k *key) {
+	k.min, _ = strconv.Atoi(p.lexer.tokenString(p.next()))
+	p.next() // eat :
+}
+
+func (p *parser) parseKeyMaximum(k *key) {
+	k.max, _ = strconv.Atoi(p.lexer.tokenString(p.next()))
+	p.next() // eat :
+}
+
+func (p *parser) parseKey(k *key) {
+	switch p.current().tkntype {
+	case tknValue:
+		k.key = p.lexer.tokenString(p.next())
+		break
+	case tknString:
+		k.key = p.lexer.tokenString(p.next())
+		p.parseKeyRegex(k)
+		break
+	case tknOpenCorner:
+		p.next() // eat <
+		switch p.current().tkntype {
+		case tknNumber:
+			p.parseKeyMinimum(k)
+			switch p.current().tkntype {
+			case tknValue:
+				k.key = p.lexer.tokenString(p.next())
+				switch p.current().tkntype {
+				case tknColon:
+					p.parseKeyMaximum(k)
+					break
+				case tknCloseCorner:
+					break
+				}
+				break
+			case tknString:
+				k.key = p.lexer.tokenString(p.next())
+				p.parseKeyRegex(k)
+				switch p.current().tkntype {
+				case tknColon:
+					p.parseKeyMaximum(k)
+					break
+				case tknCloseCorner:
+					break
+				}
+				break
+			}
+			break
+		case tknValue:
+			k.key = p.lexer.tokenString(p.next())
+			break
+		case tknString:
+			k.key = p.lexer.tokenString(p.next())
+			p.parseKeyRegex(k)
+			break
+		}
+		p.enforceNext(tknCloseCorner, "Open corner in field key must be closed") // eat >
+		break
+	}
+}
+
 func parsePrototypeField(p *parser) {
 	f := new(field)
-	f.key = p.lexer.tokenString(p.current())
-	if p.next().tkntype == tknString {
-		r, err := regexp.Compile(f.key)
-		if err != nil {
-			p.addError(fmt.Sprintf(errInvalidRegex, f.key, p.prototype.key))
-		}
-		f.regex = r
-	}
+	f.key = new(key)
+	p.parseKey(f.key)
 	p.enforceNext(tknColon, "Expected ':'") // eat :
 	f.value = new(fieldValue)
 	p.parsePrototypeFieldValue(f.value)
@@ -268,7 +347,8 @@ func parsePrototypeField(p *parser) {
 
 func parsePrototypeElement(p *parser) {
 	e := new(element)
-	e.key = p.lexer.tokenString(p.next())
+	e.key = new(key)
+	p.parseKey(e.key)
 	p.parsePrototypeParameters(e)
 	p.enforceNext(tknOpenBrace, "Expected '{'") // eat {
 	p.addPrototypeElement(e)
@@ -307,20 +387,20 @@ func (p *parser) addPrototypeElement(e *element) {
 	if p.prototype.elements == nil {
 		p.prototype.elements = make(map[string][]*element)
 	}
-	if p.prototype.elements[e.key] == nil {
-		p.prototype.elements[e.key] = make([]*element, 0)
+	if p.prototype.elements[e.key.key] == nil {
+		p.prototype.elements[e.key.key] = make([]*element, 0)
 	}
-	p.prototype.elements[e.key] = append(p.prototype.elements[e.key], e)
+	p.prototype.elements[e.key.key] = append(p.prototype.elements[e.key.key], e)
 }
 
 func (p *parser) addPrototypeField(f *field) {
 	if p.prototype.fields == nil {
 		p.prototype.fields = make(map[string][]*field)
 	}
-	if p.prototype.fields[f.key] == nil {
-		p.prototype.fields[f.key] = make([]*field, 0)
+	if p.prototype.fields[f.key.key] == nil {
+		p.prototype.fields[f.key.key] = make([]*field, 0)
 	}
-	p.prototype.fields[f.key] = append(p.prototype.fields[f.key], f)
+	p.prototype.fields[f.key.key] = append(p.prototype.fields[f.key.key], f)
 }
 
 func (p *parser) addFieldAlias(f *field) {
@@ -328,7 +408,7 @@ func (p *parser) addFieldAlias(f *field) {
 		p.prototype.declaredFieldAliases = make(map[string]*field)
 	}
 	if p.prototype.declaredFieldAliases[f.alias] != nil {
-		p.addError(fmt.Sprintf(errDuplicateAlias, f.alias, p.prototype.key))
+		p.addError(fmt.Sprintf(errDuplicateAlias, f.alias, p.prototype.key.key))
 	} else {
 		p.prototype.declaredFieldAliases[f.alias] = f
 	}
@@ -339,7 +419,7 @@ func (p *parser) addElementAlias(e *element) {
 		p.prototype.declaredElementAliases = make(map[string]*element)
 	}
 	if p.prototype.declaredElementAliases[e.alias] != nil {
-		p.addError(fmt.Sprintf(errDuplicateAlias, e.alias, p.prototype.key))
+		p.addError(fmt.Sprintf(errDuplicateAlias, e.alias, p.prototype.key.key))
 	} else {
 		p.prototype.declaredElementAliases[e.alias] = e
 	}
@@ -359,13 +439,18 @@ func (p *parser) addField(key string, f *field) {
 	if p.scope.fields == nil {
 		p.scope.fields = make(map[string][]*field)
 	}
-	if p.scope.fields[f.key] == nil {
-		p.scope.fields[f.key] = make([]*field, 0)
+	if p.scope.fields[f.key.key] == nil {
+		p.scope.fields[f.key.key] = make([]*field, 0)
 	}
-	p.scope.fields[f.key] = append(p.scope.fields[f.key], f)
+	p.scope.fields[f.key.key] = append(p.scope.fields[f.key.key], f)
+}
+
+func (p *parser) validateCompleteElement(e *element) {
+
 }
 
 func parseElementClosure(p *parser) {
+	p.validateCompleteElement(p.scope)
 	p.prototype = p.prototype.parent
 	p.scope = p.scope.parent
 	p.next()
@@ -382,7 +467,8 @@ func (p *parser) importParseConstructs() {
 func parsePrototypeFieldAlias(p *parser) {
 	f := new(field)
 	p.enforceNext(tknValue, "Expected alias keyword") // eat the alias keyword (kw not verified)
-	f.key = p.lexer.tokenString(p.next())
+	f.key = new(key)
+	p.parseKey(f.key)
 	p.enforceNext(tknAssign, "Expected '='") // eat =
 	f.value = new(fieldValue)
 	p.parsePrototypeFieldValue(f.value)
@@ -434,7 +520,28 @@ func (p *parser) importPrototypeConstructs() {
 	}
 }
 
-func (p *parser) validateField(c *fieldValue) bool {
+func (p *parser) validateField(key string, f *field) bool {
+
+	// check field frequency
+	if p.prototype.fields[key][0].key.max != 0 {
+		if len(p.scope.fields[key]) >= p.prototype.fields[key][0].key.max {
+			p.addError(errDuplicateField)
+			return false
+		}
+	}
+
+	/* check single value regex matching
+	if len(f.value.children) == 1 {
+		fmt.Println("here")
+		if p.prototype.fields[key][0].value.children[0].value != nil {
+			fmt.Println("and here")
+			if !p.prototype.fields[key][0].key.regex.MatchString(f.value.children[0].value) {
+				p.addError(errInvalidRegex)
+				return false
+			}
+		}
+	}*/
+
 	return true
 }
 

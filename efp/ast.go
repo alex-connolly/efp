@@ -4,9 +4,15 @@ import "regexp"
 
 type field struct {
 	alias string
+	key   *key
+	value *fieldValue
+}
+
+type key struct {
 	key   string
 	regex *regexp.Regexp
-	value *fieldValue
+	min   int
+	max   int
 }
 
 type fieldValue struct {
@@ -20,9 +26,8 @@ type fieldValue struct {
 
 type element struct {
 	alias                    string
-	regex                    *regexp.Regexp
+	key                      *key
 	parent                   *element
-	key                      string
 	parameters               []*fieldValue
 	declaredTextAliases      map[string]string
 	discoveredElementAliases map[string]*element
@@ -31,4 +36,16 @@ type element struct {
 	fields                   map[string][]*field
 	discoveredFieldAliases   map[string]*field
 	declaredFieldAliases     map[string]*field
+}
+
+var standards = map[string]string{
+	"string": `".*"`,
+	"int":    "-[1-9]+|[0-9]+",
+	"float":  "[0-9]*.[0-9]+",
+	"bool":   "true|false",
+	"uint":   "[0-9]+",
+}
+
+func (e *element) addStandardAliases() {
+	e.declaredTextAliases = standards
 }

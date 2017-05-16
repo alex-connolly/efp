@@ -26,6 +26,8 @@ func TestIsPrototypeField(t *testing.T) {
 	assert(t, isPrototypeField(p), "maximum disjunction field failed")
 	p = &parser{lexer: lex([]byte(`<3:name|string|"a-zA-z{5}":3> : string`))}
 	assert(t, isPrototypeField(p), "fixed disjunction field failed")
+	p = &parser{lexer: lex([]byte(`"[a-z]+" : string`))}
+	assert(t, isPrototypeField(p), "regex key failed")
 }
 
 func TestIsPrototypeElement(t *testing.T) {
@@ -45,7 +47,7 @@ func TestIsPrototypeElement(t *testing.T) {
 	p = &parser{lexer: lex([]byte("<name:3>(){}"))}
 	assert(t, isPrototypeElement(p), "maximum empty parameterised element failed")
 	p = &parser{lexer: lex([]byte("<3:name:3>(){}"))}
-	assert(t, isPrototypeElement(p), "fixed emptyparameterised element failed")
+	assert(t, isPrototypeElement(p), "fixed empty parameterised element failed")
 
 	p = &parser{lexer: lex([]byte("<3:name>(int, string){}"))}
 	assert(t, isPrototypeElement(p), "minimum parameterised element failed")

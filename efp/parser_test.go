@@ -1,9 +1,6 @@
 package efp
 
-import (
-	"fmt"
-	"testing"
-)
+import "testing"
 
 func TestParseSimpleFieldValid(t *testing.T) {
 	p := basicParser("name : string")
@@ -94,7 +91,6 @@ func TestParseArrayFieldFixedValid(t *testing.T) {
 	parsePrototypeField(p)
 	p.createParseString(`name = ["ender", "me"]`)
 	parseField(p)
-	fmt.Println(p.errs)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, p.scope.fields["name"] != nil, "fields should not be nil")
