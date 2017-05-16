@@ -31,7 +31,7 @@ func TestPrototypeRecursiveElementAlias(t *testing.T) {
 
 func basicParser(data string) *parser {
 	p := new(parser)
-	p.prototypeString(data)
+	p.createPrototypeString(data)
 	return p
 }
 

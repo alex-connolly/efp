@@ -107,7 +107,7 @@ func TestIsElementAlias(t *testing.T) {
 	assert(t, isElementAlias(p), "maximum disjunction parameterised element alias failed")
 	p = &parser{lexer: lex([]byte("alias x = <3:name|int|string:3>(int){}"))}
 	assert(t, isElementAlias(p), "disjunction parameterised element alias failed")
-	p = &parser{lexer: lex([]byte(`alias x = <3:name|"a-zA-Z"|string:3>(int){}`))}
+	p = &parser{lexer: lex([]byte(`alias x = <3:name|"[a-zA-Z]+"|string:3>(int){}`))}
 	assert(t, isElementAlias(p), "regex disjunction parameterised element alias failed")
 }
 

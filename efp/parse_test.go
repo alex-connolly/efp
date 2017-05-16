@@ -7,31 +7,36 @@ import (
 
 func TestParseSimpleFieldValid(t *testing.T) {
 	p := basicParser("name : string")
+	assertNow(t, len(p.lexer.tokens) == 3, "wrong token length")
+	parsePrototypeField(p)
+	assertNow(t, len(p.prototype.fields) == 1, "wrong field length")
 	// valid example
-	p.parseString(`name = "ender"`)
+	p.createParseString(`name = "ender"`)
 	parseField(p)
-	fmt.Printf("Got her2e\n")
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, len(p.scope.fields["name"]) == 1, "field length wrong")
 	assertNow(t, p.scope.fields["name"][0] != nil, "name nil")
 	assertNow(t, len(p.scope.fields["name"][0].value.children) == 1, "wrong children number")
-
-	assert(t, p.scope.fields["name"][0].value.children[0].value == "ender", "invalid value "+p.scope.fields["name"][0].value.children[0].value)
+	assert(t, p.scope.fields["name"][0].value.children[0].value == "ender", "xxx")
 
 }
 
 func TestParseSimpleFieldInvalid(t *testing.T) {
 	p := basicParser("name : string")
+	parsePrototypeField(p)
 	// invalid example
-	p.parseString(`name = ender`)
+	p.createParseString(`name = ender`)
+	parseField(p)
 	assert(t, p.errs != nil, "errs should not be nil")
 }
 
 func TestParseArrayFieldValid(t *testing.T) {
 	p := new(parser)
-	p.prototypeString("name : [string]")
-	p.parseString(`name = ["ender", "me"]`)
+	p.createPrototypeString("name : [string]")
+	parsePrototypeField(p)
+	p.createParseString(`name = ["ender", "me"]`)
+	parseField(p)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, p.scope.fields["name"] != nil, "fields should not be nil")
@@ -42,7 +47,9 @@ func TestParseArrayFieldValid(t *testing.T) {
 func TestParseArrayFieldMinimumValid(t *testing.T) {
 	// valid
 	p := basicParser("name : [2:string]")
-	p.parseString(`name = ["ender", "me"]`)
+	parsePrototypeField(p)
+	p.createParseString(`name = ["ender", "me"]`)
+	parseField(p)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, p.scope.fields["name"] != nil, "fields should not be nil")
@@ -54,7 +61,7 @@ func TestParseArrayFieldMinimumValid(t *testing.T) {
 func TestParseArrayFieldMinimumInvalid(t *testing.T) {
 	p := basicParser("name : [2:string]")
 	// invalid
-	p.parseString(`name = ["ender", "me", "him"]`)
+	p.createParseString(`name = ["ender", "me", "him"]`)
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
 }
@@ -62,7 +69,7 @@ func TestParseArrayFieldMinimumInvalid(t *testing.T) {
 func TestParseArrayFieldMaximumValid(t *testing.T) {
 	// valid
 	p := basicParser("name : [string:2]")
-	p.parseString(`name = ["ender", "me"]`)
+	p.createParseString(`name = ["ender", "me"]`)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, p.scope.fields["name"] != nil, "fields should not be nil")
@@ -73,9 +80,10 @@ func TestParseArrayFieldMaximumValid(t *testing.T) {
 func TestParseArrayFieldMaximumInvalid(t *testing.T) {
 	// valid
 	p := basicParser("name : [string:2]")
-
+	parsePrototypeField(p)
 	// invalid
-	p.parseString(`name = ["ender", "me", "him"]`)
+	p.createParseString(`name = ["ender", "me", "him"]`)
+	parseField(p)
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
 }
@@ -83,7 +91,10 @@ func TestParseArrayFieldMaximumInvalid(t *testing.T) {
 func TestParseArrayFieldFixedValid(t *testing.T) {
 	// valid
 	p := basicParser("name : [2:string:2]")
-	p.parseString(`name = ["ender", "me"]`)
+	parsePrototypeField(p)
+	p.createParseString(`name = ["ender", "me"]`)
+	parseField(p)
+	fmt.Println(p.errs)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, p.scope.fields["name"] != nil, "fields should not be nil")
@@ -91,16 +102,18 @@ func TestParseArrayFieldFixedValid(t *testing.T) {
 	assert(t, p.scope.fields["name"][0].value.children[1].value == "me", "invalid value 1")
 }
 
-func TestParseArrayFieldFixedInalid(t *testing.T) {
+func TestParseArrayFieldFixedInvalid(t *testing.T) {
 	p := basicParser("name : [2:string:2]")
-
+	parsePrototypeField(p)
 	// invalid
-	p.parseString(`name = ["ender", "me", "him"]`)
+	p.createParseString(`name = ["ender", "me", "him"]`)
+	parseField(p)
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
 
 	// invalid
-	p.parseString(`name = ["ender"]`)
+	p.createParseString(`name = ["ender"]`)
+	parseField(p)
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
 }
@@ -108,7 +121,10 @@ func TestParseArrayFieldFixedInalid(t *testing.T) {
 func TestParseArrayFieldDisjunctionValid(t *testing.T) {
 	// valid
 	p := basicParser("name : [string|int]")
-	p.parseString(`name = ["ender", "me"]`)
+	parsePrototypeField(p)
+
+	p.createParseString(`name = ["ender", "me"]`)
+	parseField(p)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, len(p.scope.fields["name"]) == 1, "field length wrong")
@@ -117,7 +133,8 @@ func TestParseArrayFieldDisjunctionValid(t *testing.T) {
 	assert(t, p.scope.fields["name"][0].value.children[1].value == "me", "invalid value 1")
 
 	//valid
-	p.parseString(`name = [6, 7]`)
+	p.createParseString(`name = [6, 7]`)
+	parseField(p)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, len(p.scope.fields["name"]) == 1, "field length wrong")
@@ -126,7 +143,8 @@ func TestParseArrayFieldDisjunctionValid(t *testing.T) {
 	assert(t, p.scope.fields["name"][0].value.children[1].value == "7", "invalid value 1")
 
 	// valid
-	p.parseString(`name = ["ender", 6]`)
+	p.createParseString(`name = ["ender", 6]`)
+	parseField(p)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, len(p.scope.fields["name"]) == 1, "field length wrong")
@@ -135,11 +153,13 @@ func TestParseArrayFieldDisjunctionValid(t *testing.T) {
 	assert(t, p.scope.fields["name"][0].value.children[1].value == "6", "invalid value 1")
 }
 
-func TestParseArrayFieldDisjunctionInalid(t *testing.T) {
+func TestParseArrayFieldDisjunctionInvalid(t *testing.T) {
 	// valid
 	p := basicParser("name : [string|int]")
+	parsePrototypeField(p)
 	// invalid
-	p.parseString(`name = [true, false]`)
+	p.createParseString(`name = [true, false]`)
+	parseField(p)
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
 
@@ -148,7 +168,10 @@ func TestParseArrayFieldDisjunctionInalid(t *testing.T) {
 func TestParseArrayFieldDisjunctionMinimumValid(t *testing.T) {
 	// valid
 	p := basicParser("name : [2:string|int]")
-	p.parseString(`name = ["ender", "me"]`)
+	parsePrototypeField(p)
+
+	p.createParseString(`name = ["ender", "me"]`)
+	parseField(p)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, len(p.scope.fields["name"]) == 1, "field length wrong")
@@ -157,7 +180,8 @@ func TestParseArrayFieldDisjunctionMinimumValid(t *testing.T) {
 	assert(t, p.scope.fields["name"][0].value.children[1].value == "me", "invalid value 1")
 
 	//valid
-	p.parseString(`name = [6, 7]`)
+	p.createParseString(`name = [6, 7]`)
+	parseField(p)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, len(p.scope.fields["name"]) == 1, "field length wrong")
@@ -166,28 +190,32 @@ func TestParseArrayFieldDisjunctionMinimumValid(t *testing.T) {
 	assert(t, p.scope.fields["name"][0].value.children[1].value == "7", "invalid value 1")
 
 	// valid
-	p.parseString(`name = ["ender", 6]`)
+	p.createParseString(`name = ["ender", 6]`)
+	parseField(p)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assert(t, p.scope.fields["name"][0].value.children[0].value == "ender", "invalid value 0")
 	assert(t, p.scope.fields["name"][0].value.children[1].value == "6", "invalid value 1")
 }
 
-func TestParseArrayFieldDisjunctionMinimumInValid(t *testing.T) {
+func TestParseArrayFieldDisjunctionMinimumInvalid(t *testing.T) {
 	// valid
 	p := basicParser("name : [2:string|int]")
+	parsePrototypeField(p)
 	// invalid
-	p.parseString(`name = [true, false]`)
+	p.createParseString(`name = [true, false]`)
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
 
 	// invalid
-	p.parseString(`name = ["a"]`)
+	p.createParseString(`name = ["a"]`)
+	parseField(p)
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
 
 	// invalid
-	p.parseString(`name = [6]`)
+	p.createParseString(`name = [6]`)
+	parseField(p)
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
 
@@ -196,7 +224,10 @@ func TestParseArrayFieldDisjunctionMinimumInValid(t *testing.T) {
 func TestParseArrayFieldDisjunctionMaximumValid(t *testing.T) {
 	// valid
 	p := basicParser("name : [string|int:2]")
-	p.parseString(`name = ["ender", "me"]`)
+	parsePrototypeField(p)
+
+	p.createParseString(`name = ["ender", "me"]`)
+	parseField(p)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, len(p.scope.fields["name"]) == 1, "field length wrong")
@@ -205,7 +236,8 @@ func TestParseArrayFieldDisjunctionMaximumValid(t *testing.T) {
 	assert(t, p.scope.fields["name"][0].value.children[1].value == "me", "invalid value 1")
 
 	//valid
-	p.parseString(`name = [6, 7]`)
+	p.createParseString(`name = [6, 7]`)
+	parseField(p)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, len(p.scope.fields["name"]) == 1, "field length wrong")
@@ -214,7 +246,8 @@ func TestParseArrayFieldDisjunctionMaximumValid(t *testing.T) {
 	assert(t, p.scope.fields["name"][0].value.children[1].value == "7", "invalid value 1")
 
 	// valid
-	p.parseString(`name = ["ender", 6]`)
+	p.createParseString(`name = ["ender", 6]`)
+	parseField(p)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, len(p.scope.fields["name"]) == 1, "field length wrong")
@@ -226,19 +259,23 @@ func TestParseArrayFieldDisjunctionMaximumValid(t *testing.T) {
 func TestParseArrayFieldDisjunctionMaximumInvalid(t *testing.T) {
 	// valid
 	p := basicParser("name : [string|int:2]")
+	parsePrototypeField(p)
 
 	// invalid
-	p.parseString(`name = [false, true]`)
+	p.createParseString(`name = [false, true]`)
+	parseField(p)
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
 
 	// invalid
-	p.parseString(`name = ["a", "b", "c"]`)
+	p.createParseString(`name = ["a", "b", "c"]`)
+	parseField(p)
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
 
 	// invalid
-	p.parseString(`name = [6, 7, 8]`)
+	p.createParseString(`name = [6, 7, 8]`)
+	parseField(p)
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
 
@@ -247,7 +284,10 @@ func TestParseArrayFieldDisjunctionMaximumInvalid(t *testing.T) {
 func TestParseArrayFieldDisjunctionFixedValid(t *testing.T) {
 	// valid
 	p := basicParser("name : [2:string|int:2]")
-	p.parseString(`name = ["ender", "me"]`)
+	parsePrototypeField(p)
+
+	p.createParseString(`name = ["ender", "me"]`)
+	parseField(p)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, len(p.scope.fields["name"]) == 1, "field length wrong")
@@ -256,7 +296,8 @@ func TestParseArrayFieldDisjunctionFixedValid(t *testing.T) {
 	assert(t, p.scope.fields["name"][0].value.children[1].value == "me", "invalid value 1")
 
 	//valid
-	p.parseString(`name = [6, 7]`)
+	p.createParseString(`name = [6, 7]`)
+	parseField(p)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, len(p.scope.fields["name"]) == 1, "field length wrong")
@@ -265,29 +306,14 @@ func TestParseArrayFieldDisjunctionFixedValid(t *testing.T) {
 	assert(t, p.scope.fields["name"][0].value.children[1].value == "7", "invalid value 1")
 
 	// valid
-	p.parseString(`name = ["ender", 6]`)
+	p.createParseString(`name = ["ender", 6]`)
+	parseField(p)
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, len(p.scope.fields["name"]) == 1, "field length wrong")
 	assertNow(t, p.scope.fields["name"][0] != nil, "name nil")
 	assert(t, p.scope.fields["name"][0].value.children[0].value == "ender", "invalid value 0")
 	assert(t, p.scope.fields["name"][0].value.children[1].value == "6", "invalid value 1")
-
-	// invalid
-	p.parseString(`name = [hello, 6]`)
-	assert(t, p.errs != nil, "errs should not be nil")
-	assert(t, p.scope != nil, "p.scope should not be nil")
-
-	// invalid
-	p.parseString(`name = ["a", "b", "c"]`)
-	assert(t, p.errs != nil, "errs should not be nil")
-	assert(t, p.scope != nil, "p.scope should not be nil")
-
-	// invalid
-	p.parseString(`name = [6, 7, 8]`)
-	assert(t, p.errs != nil, "errs should not be nil")
-	assert(t, p.scope != nil, "p.scope should not be nil")
-
 }
 
 func TestParseArrayFieldDisjunctionFixedInvalid(t *testing.T) {
@@ -295,17 +321,17 @@ func TestParseArrayFieldDisjunctionFixedInvalid(t *testing.T) {
 	p := basicParser("name : [2:string|int:2]")
 
 	// invalid
-	p.parseString(`name = [false, false]`)
+	p.createParseString(`name = [false, false]`)
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
 
 	// invalid
-	p.parseString(`name = ["a", "b", "c"]`)
+	p.createParseString(`name = ["a", "b", "c"]`)
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
 
 	// invalid
-	p.parseString(`name = [6, 7, 8]`)
+	p.createParseString(`name = [6, 7, 8]`)
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
 
@@ -314,13 +340,18 @@ func TestParseArrayFieldDisjunctionFixedInvalid(t *testing.T) {
 func TestParseArrayFieldTwoDimensionalDisjunction(t *testing.T) {
 	// valid
 	p := basicParser("name : [2:[2:string|int:2]:2]")
-	p.parseString(`name = [["ender", "me"], ["me", "ender"]]`)
+	parsePrototypeField(p)
+
+	p.createParseString(`name = [["ender", "me"], ["me", "ender"]]`)
+	parseField(p)
 	assert(t, p.errs == nil, "errs should be nil")
 }
 
 func TestParseArrayFieldTwoDimensionalDisjunctionArrays(t *testing.T) {
 	// valid
 	p := basicParser("name : [2:[2:string:2|[2:int:2]:2]")
-	p.parseString(`name = [["ender", "me"], ["me", "ender"]]`)
+	parsePrototypeField(p)
+	p.createParseString(`name = [["ender", "me"], ["me", "ender"]]`)
+	parseField(p)
 	assert(t, p.errs == nil, "errs should be nil")
 }

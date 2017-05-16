@@ -33,7 +33,7 @@ func (p *parser) Parse(filename string) {
 		fmt.Printf("Failed to read from file.\n")
 		return
 	}
-	p.parseBytes(bytes)
+	p.runParserBytes(bytes)
 }
 
 func (p *parser) Prototype(filename string) {
@@ -53,27 +53,47 @@ func (p *parser) Prototype(filename string) {
 		fmt.Printf("Failed to read from file.\n")
 		return
 	}
-	p.prototypeBytes(bytes)
+	p.runPrototypeBytes(bytes)
 }
 
-func (p *parser) prototypeBytes(bytes []byte) {
+func (p *parser) run() {
+	for _, c := range p.constructs {
+		if c.is(p) {
+			c.process(p)
+		}
+	}
+}
+
+func (p *parser) runPrototypeBytes(bytes []byte) {
+	p.createPrototypeBytes(bytes)
+	p.run()
+}
+
+func (p *parser) runParserBytes(bytes []byte) {
+	p.createPrototypeBytes(bytes)
+	p.run()
+}
+
+func (p *parser) createPrototypeBytes(bytes []byte) {
 	p.importPrototypeConstructs()
 	p.lexer = lex(bytes)
 	p.prototype = new(element)
 }
 
-func (p *parser) parseBytes(bytes []byte) {
+func (p *parser) createParseBytes(bytes []byte) {
 	p.importParseConstructs()
 	p.lexer = lex(bytes)
 	p.scope = new(element)
 }
 
-func (p *parser) parseString(text string) {
-	p.parseBytes([]byte(text))
+func (p *parser) createParseString(text string) {
+	p.index = 0
+	p.createParseBytes([]byte(text))
 }
 
-func (p *parser) prototypeString(text string) {
-	p.prototypeBytes([]byte(text))
+func (p *parser) createPrototypeString(text string) {
+	p.index = 0
+	p.createPrototypeBytes([]byte(text))
 }
 
 // A construct is a repeated pattern within an efp file
@@ -93,9 +113,7 @@ func isValue(t tokenType) bool {
 
 func (p *parser) validateKey(key string) string {
 	for k, v := range p.prototype.fields {
-		fmt.Printf("key: %s, regex: %p\n", k, v[0].regex)
 		if k == key {
-			fmt.Printf("found\n")
 			return k
 		} else if v[0].regex != nil {
 			if v[0].regex.MatchString(key) {
@@ -123,9 +141,7 @@ func (p *parser) parseFieldValue(fv *fieldValue) {
 	case tknOpenSquare:
 		p.parseArrayDeclaration(fv)
 		break
-	case tknValue:
-	case tknString:
-	case tknNumber:
+	case tknNumber, tknString, tknValue:
 		fv.addChild(p.lexer.tokenString(p.next()))
 		break
 	}
@@ -135,17 +151,23 @@ func (p *parser) parseArrayDeclaration(fv *fieldValue) {
 	p.next() // eat [
 	fv.isArray = true
 	for p.current().tkntype != tknCloseSquare {
-		if isValue(p.current().tkntype) {
-			fv.addChild(p.lexer.tokenString(p.current()))
-		} else {
-			p.addError("Invalid token in array declaration")
-		}
-		if p.current().tkntype != tknCloseSquare {
-			if p.current().tkntype == tknComma {
-				p.next()
-			} else {
-				p.addError("Invalid token in array declaration")
+		switch p.current().tkntype {
+		case tknString, tknValue, tknNumber:
+			fv.addChild(p.lexer.tokenString(p.next()))
+			break
+		case tknOpenBracket:
+			if fv.children == nil {
+				fv.children = make([]*fieldValue, 1)
 			}
+			fv.children[0] = new(fieldValue)
+			p.parseArrayDeclaration(fv.children[0])
+		case tknComma:
+			p.next()
+			break
+		default:
+			p.addError("Invalid token in array declaration")
+			p.next()
+			break
 		}
 	}
 	p.next() // eat ]
@@ -166,9 +188,7 @@ func (p *parser) parsePrototypeFieldValue(fv *fieldValue) {
 	case tknOpenSquare:
 		p.parsePrototypeArrayDeclaration(fv)
 		break
-	case tknValue:
-	case tknNumber:
-	case tknString:
+	case tknValue, tknNumber, tknString:
 		fv.addChild(p.lexer.tokenString(p.next()))
 		break
 	}
@@ -190,10 +210,8 @@ func (p *parser) parsePrototypeArrayDeclaration(fv *fieldValue) {
 		p.enforceNext(tknColon, "Array minimum must be followed by ':'") // eat ":"
 	}
 	p.parsePrototypeFieldValue(fv)
-	if p.index >= len(p.lexer.tokens) {
-		return
-	}
 	if p.current().tkntype == tknColon {
+
 		p.enforceNext(tknColon, "Array maximum must be preceded by ':'") // eat ":"
 		num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
 		fv.max = num
@@ -233,18 +251,14 @@ func parseElementAlias(p *parser) {
 }
 
 func parsePrototypeField(p *parser) {
-	fmt.Printf("parsing field\n")
 	f := new(field)
 	f.key = p.lexer.tokenString(p.current())
 	if p.next().tkntype == tknString {
-		fmt.Printf("parsing ##\n")
 		r, err := regexp.Compile(f.key)
 		if err != nil {
-			fmt.Printf("parsing err\n")
 			p.addError(fmt.Sprintf(errInvalidRegex, f.key, p.prototype.key))
 		}
 		f.regex = r
-		fmt.Printf("regex ptr: %p\n", f.regex)
 	}
 	p.enforceNext(tknColon, "Expected ':'") // eat :
 	f.value = new(fieldValue)

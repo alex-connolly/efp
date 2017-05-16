@@ -23,3 +23,9 @@ func TestValidateKey(t *testing.T) {
 	assertNow(t, p.errs == nil, "Errors not nil")
 	assert(t, key == "[a-z]+", "Failed equality test")
 }
+
+func TestValidateKeyInvalidRegex(t *testing.T) {
+	p := basicParser(`"[a-z" : string`)
+	parsePrototypeField(p)
+	assertNow(t, p.errs != nil, "should be an error")
+}
