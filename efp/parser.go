@@ -9,7 +9,7 @@ import (
 
 type parser struct {
 	constructs []construct
-	prototype  *element
+	prototype  *protoElement
 	scope      *element
 	lexer      *lexer
 	index      int
@@ -77,7 +77,7 @@ func (p *parser) runParserBytes(bytes []byte) {
 func (p *parser) createPrototypeBytes(bytes []byte) {
 	p.importPrototypeConstructs()
 	p.lexer = lex(bytes)
-	p.prototype = new(element)
+	p.prototype = new(protoElement)
 	p.prototype.addStandardAliases()
 }
 
@@ -116,8 +116,8 @@ func (p *parser) validateKey(key string) string {
 	for k, v := range p.prototype.fields {
 		if k == key {
 			return k
-		} else if v[0] != nil && v[0].key != nil && v[0].key.regex != nil {
-			if v[0].key.regex.MatchString(key) {
+		} else if v != nil && v.key != nil && v.key.regex != nil {
+			if v.key.regex.MatchString(key) {
 				return k
 			}
 		}
@@ -136,13 +136,13 @@ func parseField(p *parser) {
 	f.key.key = p.lexer.tokenString(p.next())
 	key := p.validateKey(f.key.key)
 	p.enforceNext(tknAssign, "Expected '='") // eat =
-	f.value = new(fieldValue)
-	p.parseFieldValue(f.value)
+	f.value = new(value)
+	p.parsevalue(f.value)
 	p.validateField(key, f)
 	p.addField(key, f)
 }
 
-func (p *parser) parseFieldValue(fv *fieldValue) {
+func (p *parser) parsevalue(fv *value) {
 	switch p.current().tkntype {
 	case tknOpenSquare:
 		p.parseArrayDeclaration(fv)
@@ -153,7 +153,7 @@ func (p *parser) parseFieldValue(fv *fieldValue) {
 	}
 }
 
-func (p *parser) parseArrayDeclaration(fv *fieldValue) {
+func (p *parser) parseArrayDeclaration(fv *value) {
 	p.next() // eat [
 	fv.isArray = true
 	for p.current().tkntype != tknCloseSquare {
@@ -163,9 +163,9 @@ func (p *parser) parseArrayDeclaration(fv *fieldValue) {
 			break
 		case tknOpenBracket:
 			if fv.children == nil {
-				fv.children = make([]*fieldValue, 1)
+				fv.children = make([]*value, 1)
 			}
-			fv.children[0] = new(fieldValue)
+			fv.children[0] = new(value)
 			p.parseArrayDeclaration(fv.children[0])
 		case tknComma:
 			p.next()
@@ -179,23 +179,32 @@ func (p *parser) parseArrayDeclaration(fv *fieldValue) {
 	p.next() // eat ]
 }
 
-func (fv *fieldValue) addChild(regex string) {
-	if fv.children == nil {
-		fv.children = make([]*fieldValue, 0)
+func (t *typeDeclaration) addChild(regex string) {
+	if t.types == nil {
+		t.types = make([]*typeDeclaration, 0)
 	}
-	val := new(fieldValue)
+	td := new(typeDeclaration)
+	td.value = regex
+	t.types = append(t.types, td)
+}
+
+func (fv *value) addChild(regex string) {
+	if fv.children == nil {
+		fv.children = make([]*value, 0)
+	}
+	val := new(value)
 	val.parent = fv
 	val.value = regex
 	fv.children = append(fv.children, val)
 }
 
-func (p *parser) parsePrototypeFieldValue(fv *fieldValue) {
+func (p *parser) parseTypeDeclaration(t *typeDeclaration) {
 	switch p.current().tkntype {
 	case tknOpenSquare:
-		p.parsePrototypeArrayDeclaration(fv)
+		p.parsePrototypeArrayDeclaration(t)
 		break
 	case tknValue, tknNumber, tknString:
-		fv.addChild(p.lexer.tokenString(p.next()))
+		t.addChild(p.lexer.tokenString(p.next()))
 		break
 	}
 	if p.index >= len(p.lexer.tokens) {
@@ -203,24 +212,24 @@ func (p *parser) parsePrototypeFieldValue(fv *fieldValue) {
 	}
 	if p.current().tkntype == tknOr {
 		p.next()
-		p.parsePrototypeFieldValue(fv)
+		p.parseTypeDeclaration(t)
 	}
 }
 
-func (p *parser) parsePrototypeArrayDeclaration(fv *fieldValue) {
+func (p *parser) parsePrototypeArrayDeclaration(t *typeDeclaration) {
 	p.enforceNext(tknOpenSquare, "Expected '['") // eat [
-	fv.isArray = true
+	t.isArray = true
 	if p.current().tkntype == tknNumber {
 		num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
-		fv.min = num
+		t.min = num
 		p.enforceNext(tknColon, "Array minimum must be followed by ':'") // eat ":"
 	}
-	p.parsePrototypeFieldValue(fv)
+	p.parseTypeDeclaration(t)
 	if p.current().tkntype == tknColon {
 
 		p.enforceNext(tknColon, "Array maximum must be preceded by ':'") // eat ":"
 		num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
-		fv.max = num
+		t.max = num
 	}
 	p.enforceNext(tknCloseSquare, "Expected ']'") // eat ]
 }
@@ -235,28 +244,28 @@ func parseElement(p *parser) {
 }
 
 func parseFieldAlias(p *parser) {
-	f := new(field)
+	f := new(protoField)
 	p.next() // eat "alias"
-	f.alias = p.lexer.tokenString(p.next())
+	alias := p.lexer.tokenString(p.next())
 	p.enforceNext(tknAssign, "Expected '='") // eat "="
 	f.key = new(key)
 	p.parseKey(f.key)
 	p.enforceNext(tknColon, "Expected ':'") // eat ":"
-	f.value = new(fieldValue)
-	p.parsePrototypeFieldValue(f.value)
-	p.addFieldAlias(f)
+	f.types = new(typeDeclaration)
+	p.parseTypeDeclaration(f.types)
+	p.addFieldAlias(alias, f)
 }
 
 func parseElementAlias(p *parser) {
-	e := new(element)
+	e := new(protoElement)
 	p.next() // eat "alias"
-	e.alias = p.lexer.tokenString(p.next())
+	alias := p.lexer.tokenString(p.next())
 	p.enforceNext(tknAssign, "Expected '='") // eat "="
 	e.key = new(key)
 	p.parseKey(e.key)
 	p.parsePrototypeParameters(e)
 	p.enforceNext(tknOpenBrace, "Expected '{'") // eat "{"
-	p.addElementAlias(e)
+	p.addElementAlias(alias, e)
 }
 
 func (p *parser) getPrototypeKey() string {
@@ -336,17 +345,17 @@ func (p *parser) parseKey(k *key) {
 }
 
 func parsePrototypeField(p *parser) {
-	f := new(field)
+	f := new(protoField)
 	f.key = new(key)
 	p.parseKey(f.key)
 	p.enforceNext(tknColon, "Expected ':'") // eat :
-	f.value = new(fieldValue)
-	p.parsePrototypeFieldValue(f.value)
+	f.types = new(typeDeclaration)
+	p.parseTypeDeclaration(f.types)
 	p.addPrototypeField(f)
 }
 
 func parsePrototypeElement(p *parser) {
-	e := new(element)
+	e := new(protoElement)
 	e.key = new(key)
 	p.parseKey(e.key)
 	p.parsePrototypeParameters(e)
@@ -354,7 +363,7 @@ func parsePrototypeElement(p *parser) {
 	p.addPrototypeElement(e)
 }
 
-func (p *parser) parsePrototypeParameters(e *element) {
+func (p *parser) parsePrototypeParameters(e *protoElement) {
 	// must use current to stop accidentally double-eating the open brace
 	if p.current().tkntype != tknOpenBracket {
 		return
@@ -376,52 +385,46 @@ func (p *parser) parsePrototypeParameters(e *element) {
 
 func (p *parser) parsePrototypeParameter() {
 	if p.prototype.parameters == nil {
-		p.prototype.parameters = make([]*fieldValue, 0)
+		p.prototype.parameters = make([]*typeDeclaration, 0)
 	}
-	fv := new(fieldValue)
-	p.parsePrototypeFieldValue(fv)
-	p.prototype.parameters = append(p.prototype.parameters, fv)
+	t := new(typeDeclaration)
+	p.parseTypeDeclaration(t)
+	p.prototype.parameters = append(p.prototype.parameters, t)
 }
 
-func (p *parser) addPrototypeElement(e *element) {
+func (p *parser) addPrototypeElement(e *protoElement) {
 	if p.prototype.elements == nil {
-		p.prototype.elements = make(map[string][]*element)
+		p.prototype.elements = make(map[string]*protoElement)
 	}
-	if p.prototype.elements[e.key.key] == nil {
-		p.prototype.elements[e.key.key] = make([]*element, 0)
-	}
-	p.prototype.elements[e.key.key] = append(p.prototype.elements[e.key.key], e)
+	p.prototype.elements[e.key.key] = e
 }
 
-func (p *parser) addPrototypeField(f *field) {
+func (p *parser) addPrototypeField(f *protoField) {
 	if p.prototype.fields == nil {
-		p.prototype.fields = make(map[string][]*field)
+		p.prototype.fields = make(map[string]*protoField)
 	}
-	if p.prototype.fields[f.key.key] == nil {
-		p.prototype.fields[f.key.key] = make([]*field, 0)
-	}
-	p.prototype.fields[f.key.key] = append(p.prototype.fields[f.key.key], f)
+	p.prototype.fields[f.key.key] = f
 }
 
-func (p *parser) addFieldAlias(f *field) {
-	if p.prototype.declaredFieldAliases == nil {
-		p.prototype.declaredFieldAliases = make(map[string]*field)
+func (p *parser) addFieldAlias(alias string, f *protoField) {
+	if p.prototype.fieldAliases == nil {
+		p.prototype.fieldAliases = make(map[string]*protoField)
 	}
-	if p.prototype.declaredFieldAliases[f.alias] != nil {
-		p.addError(fmt.Sprintf(errDuplicateAlias, f.alias, p.prototype.key.key))
+	if p.prototype.fieldAliases[alias] != nil {
+		p.addError(fmt.Sprintf(errDuplicateAlias, alias, p.prototype.key.key))
 	} else {
-		p.prototype.declaredFieldAliases[f.alias] = f
+		p.prototype.fieldAliases[alias] = f
 	}
 }
 
-func (p *parser) addElementAlias(e *element) {
-	if p.prototype.declaredElementAliases == nil {
-		p.prototype.declaredElementAliases = make(map[string]*element)
+func (p *parser) addElementAlias(alias string, e *protoElement) {
+	if p.prototype.elementAliases == nil {
+		p.prototype.elementAliases = make(map[string]*protoElement)
 	}
-	if p.prototype.declaredElementAliases[e.alias] != nil {
+	if p.prototype.elementAliases[e.alias] != nil {
 		p.addError(fmt.Sprintf(errDuplicateAlias, e.alias, p.prototype.key.key))
 	} else {
-		p.prototype.declaredElementAliases[e.alias] = e
+		p.prototype.elementAliases[e.alias] = e
 	}
 }
 
@@ -445,12 +448,18 @@ func (p *parser) addField(key string, f *field) {
 	p.scope.fields[f.key.key] = append(p.scope.fields[f.key.key], f)
 }
 
-func (p *parser) validateCompleteElement(e *element) {
-
+func (p *parser) validateCompleteElement() {
+	fmt.Printf("hi\n")
+	for k, v := range p.prototype.fields {
+		if v.key.min > len(p.scope.fields[k]) {
+			p.addError(errInsufficientFields)
+		}
+	}
 }
 
 func parseElementClosure(p *parser) {
-	p.validateCompleteElement(p.scope)
+	fmt.Printf("hip\n")
+	p.validateCompleteElement()
 	p.prototype = p.prototype.parent
 	p.scope = p.scope.parent
 	p.next()
@@ -465,14 +474,16 @@ func (p *parser) importParseConstructs() {
 }
 
 func parsePrototypeFieldAlias(p *parser) {
-	f := new(field)
+	f := new(protoField)
 	p.enforceNext(tknValue, "Expected alias keyword") // eat the alias keyword (kw not verified)
+	alias := p.lexer.tokenString(p.next())
+	p.enforceNext(tknAssign, "Expected '='")
 	f.key = new(key)
 	p.parseKey(f.key)
-	p.enforceNext(tknAssign, "Expected '='") // eat =
-	f.value = new(fieldValue)
-	p.parsePrototypeFieldValue(f.value)
-	p.addFieldAlias(f)
+	p.enforceNext(tknAssign, "Expected ':'") // eat =
+	f.types = new(typeDeclaration)
+	p.parseTypeDeclaration(f.types)
+	p.addFieldAlias(alias, f)
 }
 
 func (p *parser) current() token {
@@ -523,8 +534,8 @@ func (p *parser) importPrototypeConstructs() {
 func (p *parser) validateField(key string, f *field) bool {
 
 	// check field frequency
-	if p.prototype.fields[key][0].key.max != 0 {
-		if len(p.scope.fields[key]) >= p.prototype.fields[key][0].key.max {
+	if p.prototype.fields[key].key.max != 0 {
+		if len(p.scope.fields[key]) >= p.prototype.fields[key].key.max {
 			p.addError(errDuplicateField)
 			return false
 		}

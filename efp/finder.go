@@ -20,8 +20,9 @@ func realDistance(p *parser, tk tokenType, number int) int {
 				return count
 			}
 		}
-		if t.tkntype == tknValue {
-			if prev == tknValue {
+		switch t.tkntype {
+		case tknValue, tknString:
+			if prev == tknValue || prev == tknString {
 				inValue = false
 				count++
 			} else {
@@ -30,9 +31,11 @@ func realDistance(p *parser, tk tokenType, number int) int {
 					inValue = true
 				}
 			}
-		} else if t.tkntype == tknOpenSquare || t.tkntype == tknCloseSquare || t.tkntype == tknOr {
+			break
+		case tknOpenSquare, tknCloseSquare, tknNumber, tknOr, tknColon:
 			// do nothing
-		} else {
+			break
+		default:
 			inValue = false
 			count++
 		}
@@ -45,7 +48,9 @@ func realDistance(p *parser, tk tokenType, number int) int {
 func isField(p *parser) bool {
 	// field can be in one of these forms:
 	// key = value
-	return (realDistance(p, tknValue, 1) == 0 && realDistance(p, tknAssign, 1) == 1)
+	return (realDistance(p, tknValue, 1) == 0 && realDistance(p, tknAssign, 1) == 1) ||
+		// "key" = value
+		(realDistance(p, tknString, 1) == 0 && realDistance(p, tknAssign, 1) == 1)
 
 }
 
@@ -54,7 +59,11 @@ func isElement(p *parser) bool {
 	// key {}
 	return (realDistance(p, tknValue, 1) == 0 && realDistance(p, tknOpenBrace, 1) == 1) ||
 		// key(params){
-		(realDistance(p, tknValue, 1) == 0 && realDistance(p, tknOpenBracket, 1) == 1)
+		(realDistance(p, tknValue, 1) == 0 && realDistance(p, tknOpenBracket, 1) == 1) ||
+		//"key"{}
+		(realDistance(p, tknString, 1) == 0 && realDistance(p, tknOpenBrace, 1) == 1) ||
+		// "key"(params){
+		(realDistance(p, tknString, 1) == 0 && realDistance(p, tknOpenBracket, 1) == 1)
 }
 
 // closures are just }
@@ -122,7 +131,7 @@ func isPrototypeElementWithOffset(p *parser, offset int, extra int) bool {
 		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknOpenBracket, 1) == 3+offset) ||
 		// <3:string>(){} or <string:3>(){}
 		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknOpenBracket, 1) == 5+offset) ||
-		// <3:string|int:3>(){}
+		// <3:string|int:3>(){}, <3:string|"[A-Z]+"|name:3>(){}
 		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknOpenBracket, 1) == 7+offset)
 
 }

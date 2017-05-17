@@ -132,10 +132,14 @@ func TestIsField(t *testing.T) {
 func TestIsElement(t *testing.T) {
 	p := &parser{lexer: lex([]byte("name {}"))}
 	assert(t, isElement(p), "basic element failed")
+	p = &parser{lexer: lex([]byte(`"name" {}`))}
+	assert(t, isElement(p), "basic regex element failed")
 	p = &parser{lexer: lex([]byte("name(int){}"))}
 	assert(t, isElement(p), "parameterised element failed")
 	p = &parser{lexer: lex([]byte("name(){}"))}
 	assert(t, isElement(p), "empty parameterised element failed")
+	p = &parser{lexer: lex([]byte(`"name"(){}`))}
+	assert(t, isElement(p), "empty regex parameterised element failed")
 	p = &parser{lexer: lex([]byte("name(int, int, string){}"))}
 	assert(t, isElement(p), "multi parameterised element failed")
 }
@@ -157,6 +161,12 @@ func TestIsDistant(t *testing.T) {
 		fmt.Sprintf("wrong bracket distance: %d", realDistance(p, tknOpenBracket, 1)))
 
 	p = &parser{lexer: lex([]byte("alias x = <3: name | int | string :3>(int){}"))}
+	assert(t, realDistance(p, tknOpenCorner, 1) == 3,
+		fmt.Sprintf("wrong corner distance: %d", realDistance(p, tknOpenCorner, 1)))
+	assert(t, realDistance(p, tknOpenBracket, 1) == 10,
+		fmt.Sprintf("wrong bracket distance: %d", realDistance(p, tknOpenBracket, 1)))
+
+	p = &parser{lexer: lex([]byte(`alias x = <3: name | "[A-Z]+"| string :3>(int){}`))}
 	assert(t, realDistance(p, tknOpenCorner, 1) == 3,
 		fmt.Sprintf("wrong corner distance: %d", realDistance(p, tknOpenCorner, 1)))
 	assert(t, realDistance(p, tknOpenBracket, 1) == 10,

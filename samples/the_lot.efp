@@ -3,9 +3,10 @@ alias oneToFive = "me"
 alias number = 6
 
 base {
-    name : oneToFive
+    name : oneToFive!
     <hello:6> {
 
     }
+
 
 }

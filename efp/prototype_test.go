@@ -7,8 +7,8 @@ func TestPrototypeFieldAlias(t *testing.T) {
 	p := basicParser(`alias x = key : "value"`)
 	assert(t, isFieldAlias(p), "not field alias")
 	parseFieldAlias(p)
-	assertNow(t, p.prototype.declaredFieldAliases["x"] != nil, "")
-	assertNow(t, p.prototype.declaredFieldAliases["x"].key.key == "key", "")
+	assertNow(t, p.prototype.fieldAliases["x"] != nil, "")
+	assertNow(t, p.prototype.fieldAliases["x"].key.key == "key", "")
 }
 
 func TestPrototypeElementAlias(t *testing.T) {
@@ -16,8 +16,8 @@ func TestPrototypeElementAlias(t *testing.T) {
 	p := basicParser(`alias x = key {}`)
 	assert(t, isElementAlias(p), "")
 	parseElementAlias(p)
-	assertNow(t, p.prototype.declaredElementAliases["x"] != nil, "")
-	assertNow(t, p.prototype.declaredElementAliases["x"].key.key == "key", "")
+	assertNow(t, p.prototype.elementAliases["x"] != nil, "")
+	assertNow(t, p.prototype.elementAliases["x"].key.key == "key", "")
 }
 
 func TestPrototypeRecursiveElementAlias(t *testing.T) {
@@ -25,8 +25,8 @@ func TestPrototypeRecursiveElementAlias(t *testing.T) {
 	p := basicParser(`alias x = key {}`)
 	assert(t, isElementAlias(p), "")
 	parseElementAlias(p)
-	assertNow(t, p.prototype.declaredElementAliases["x"] != nil, "")
-	assertNow(t, p.prototype.declaredElementAliases["x"].key.key == "key", "")
+	assertNow(t, p.prototype.elementAliases["x"] != nil, "")
+	assertNow(t, p.prototype.elementAliases["x"].key.key == "key", "")
 }
 
 func basicParser(data string) *parser {
@@ -40,9 +40,7 @@ func TestPrototypeFieldBasic(t *testing.T) {
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil && p.prototype.fields["name"] != nil, "")
-	assertNow(t, len(p.prototype.fields["name"]) == 1, "wrong length")
-	assertNow(t, len(p.prototype.fields["name"][0].value.children) == 1, "wrong children length")
-	assertNow(t, p.prototype.fields["name"][0].value.children[0].value == "string", "")
+	assertNow(t, p.prototype.fields["name"].types.value == "string", "")
 }
 
 func TestPrototypeFieldBasicDisjunction(t *testing.T) {

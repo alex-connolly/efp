@@ -252,7 +252,13 @@ parent {
 }
 ```
 
-As ```name``` matches the regex of the earlier field, there is a chance it would be evaluated as such.
+```go
+parent{
+    name = "hi"
+}
+```
+
+As ```name``` matches the regex of the earlier field, there is a chance it would be interpreted as . However, in the ```efp```, string equality comparisons always take precedence over regex evaluations.
 
 This gives rise to the issue of competing regex strings, e.g.:
 
@@ -263,9 +269,114 @@ parent {
 }
 ```
 
-Of course, it would be possible to assign the field to the "best" or "simplest" regex key (by whatever metric), but this would result in additional overhead for each regex declaration, as well as ambiguity regarding these complexity comparisons. The expected behaviour, therefore, is to assign to the first matched regex. As the regexes are stored in a map (and therefore in an arbitrary order), this allocation is pseudo-random, and should NOT be relied upon or predicted. The best solution, therefore, is to avoid overlapping regex declarations within an element. 
+Of course, it would be possible to assign the field to the "best" or "simplest" regex key (by whatever metric), but this would result in additional overhead for each regex declaration, as well as ambiguity regarding these complexity comparisons. The expected behaviour, therefore, is to assign to the first matched regex. As the regexes are stored in a map (and therefore in an arbitrary order), this allocation is pseudo-random, and should NOT be relied upon or predicted. The best solution, therefore, is to avoid overlapping regex declarations within an element.
 
-NOTE: This may change in the future, depending on feedback, or may become an option.
+NOTE: This may change in the future, depending on feedback, or this control may become an option.
+
+## Type System
+
+When defining types, they are stored using the following structure:
+
+```go
+type typeDeclaration struct {
+	isArray bool
+	types   []*typeDeclaration
+}
+```
+
+The following definitions and their representations:
+
+![Alttext](https://g.gravizo.com/source/custom_mark10?https%3A%2F%2Fraw.githubusercontent.com%2FTLmaK0%2Fgravizo%2Fmaster%2FREADME.md)
+
+```go
+x : string
+
+```
+
+<details>
+<summary></summary>
+custom_mark10
+  digraph G {
+    aize ="4,4";
+    string [shape=box];
+  }
+custom_mark10
+</details>
+
+```go
+x : string|int
+
+```
+
+<details>
+<summary></summary>
+custom_mark10
+  digraph G {
+    aize ="4,4";
+    string [shape=box];
+    int [shape=box];
+  }
+custom_mark10
+</details>
+
+
+
+```go
+x : [string|int]
+
+```
+
+<details>
+<summary></summary>
+custom_mark10
+  digraph G {
+    aize ="4,4";
+    array [shape=box]
+    array -> string [shape=box];
+    array -> int [shape=box];
+  }
+custom_mark10
+</details>
+
+```go
+x : [string]|[int]
+
+```
+
+<details>
+<summary></summary>
+custom_mark10
+  digraph G {
+    aize ="4,4";
+    array [shape=box]
+    array -> string [shape=box];
+    array [shape=box]
+    array -> int [shape=box];
+  }
+custom_mark10
+</details>
+
+```go
+x : [[string]]|[int]
+
+```
+
+<details>
+<summary></summary>
+custom_mark10
+  digraph G {
+    aize ="4,4";
+    array [shape=box]
+    array -> array [shape=box]
+    array -> string [shape=box];
+    array [shape=box]
+    array -> int [shape=box];
+  }
+custom_mark10
+</details>
+
+
+## Accessing Values
 
 ## Errors
 

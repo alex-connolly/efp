@@ -13,7 +13,9 @@ const (
 
 // Errors during parsing.
 const (
-	errDuplicateElement  = "Only %d element(s) with key %s permitted in scope %s."
-	errDuplicateField    = "Only %d field(s) with key %s permitted in scope %s."
-	errInvalidFieldValue = "Value %s does not match regex %s for field %s."
+	errDuplicateElement   = "Only %d element(s) with key %s permitted in scope %s."
+	errDuplicateField     = "Only %d field(s) with key %s permitted in scope %s."
+	errInvalidFieldValue  = "Value %s does not match regex %s for field %s."
+	errInvalidToken       = "Invalid token %s in %s."
+	errInsufficientFields = "Insufficient fields with key %s in element %s."
 )
