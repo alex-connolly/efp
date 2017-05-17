@@ -286,95 +286,75 @@ type typeDeclaration struct {
 
 The following definitions and their representations:
 
-![Alttext](https://g.gravizo.com/source/custom_mark10?https%3A%2F%2Fraw.githubusercontent.com%2FTLmaK0%2Fgravizo%2Fmaster%2FREADME.md)
-
 ```go
 x : string
 
 ```
 
-<details>
-<summary></summary>
-custom_mark10
+<img src='https://g.gravizo.com/svg?
   digraph G {
-    aize ="4,4";
-    string [shape=box];
+      aize ="4,4";
+      string [shape=box];
   }
-custom_mark10
-</details>
+'/>
 
 ```go
 x : string|int
 
 ```
 
-<details>
-<summary></summary>
-custom_mark10
+<img src='https://g.gravizo.com/svg?
   digraph G {
-    aize ="4,4";
-    string [shape=box];
-    int [shape=box];
+      aize ="4,4";
+      string [shape=box];
+      int [shape=box];
   }
-custom_mark10
-</details>
-
+'/>
 
 
 ```go
 x : [string|int]
 
 ```
-
-<details>
-<summary></summary>
-custom_mark10
+<img src='https://g.gravizo.com/svg?
   digraph G {
     aize ="4,4";
     array [shape=box]
     array -> string [shape=box];
     array -> int [shape=box];
   }
-custom_mark10
-</details>
+'/>
 
 ```go
 x : [string]|[int]
 
 ```
 
-<details>
-<summary></summary>
-custom_mark10
+<img src='https://g.gravizo.com/svg?
   digraph G {
-    aize ="4,4";
-    array [shape=box]
-    array -> string [shape=box];
-    array [shape=box]
-    array -> int [shape=box];
+      aize ="4,4";
+      array [shape=box]
+      array -> array -> string [shape=box];
+      array [shape=box]
+      array -> int [shape=box];
   }
-custom_mark10
-</details>
+'/>
 
 ```go
 x : [[string]]|[int]
 
 ```
 
-<details>
-<summary></summary>
-custom_mark10
+<img src='https://g.gravizo.com/svg?
   digraph G {
-    aize ="4,4";
-    array [shape=box]
-    array -> array [shape=box]
-    array -> string [shape=box];
-    array [shape=box]
-    array -> int [shape=box];
+      aize ="4,4";
+      array [shape=box]
+      array -> array [shape=box]
+      array -> string [shape=box];
+      array [shape=box]
+      array -> int [shape=box];
   }
-custom_mark10
-</details>
-
+'/>
 
 ## Accessing Values
 
