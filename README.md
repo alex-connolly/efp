@@ -291,46 +291,45 @@ x : string
 
 ```
 
-<img src='https://g.gravizo.com/svg?
+![Alt text](https://g.gravizo.com/svg?
   digraph G {
       aize ="4,4";
       string [shape=box];
   }
-'/>
+)
 
 ```go
 x : string|int
 
 ```
 
-<img src='https://g.gravizo.com/svg?
+![Alt text](https://g.gravizo.com/svg?
   digraph G {
       aize ="4,4";
       string [shape=box];
       int [shape=box];
   }
-'/>
-
+)
 
 ```go
 x : [string|int]
 
 ```
-<img src='https://g.gravizo.com/svg?
+![Alt text](https://g.gravizo.com/svg?
   digraph G {
     aize ="4,4";
     array [shape=box]
     array -> string [shape=box];
     array -> int [shape=box];
   }
-'/>
+)
 
 ```go
 x : [string]|[int]
 
 ```
 
-<img src='https://g.gravizo.com/svg?
+![Alt text](https://g.gravizo.com/svg?
   digraph G {
       aize ="4,4";
       array [shape=box]
@@ -338,14 +337,14 @@ x : [string]|[int]
       array [shape=box]
       array -> int [shape=box];
   }
-'/>
+)
 
 ```go
 x : [[string]]|[int]
 
 ```
 
-<img src='https://g.gravizo.com/svg?
+![Alt text](https://g.gravizo.com/svg?
   digraph G {
       aize ="4,4";
       array [shape=box]
@@ -354,7 +353,7 @@ x : [[string]]|[int]
       array [shape=box]
       array -> int [shape=box];
   }
-'/>
+)
 
 ## Accessing Values
 
