@@ -1,11 +1,12 @@
 package efp
 
 // returns the distance between two tokens, but with:
-// string|int|[string]|[[int]] == 1
+// string|int|[string:3]|[[2:int]] == 1
 // alias x = 2
 // string|int|x = 1
 // string | int | x = 1
 // ALIAS ALIAS2 = 2
+// first token is 0 away, second is 1 away etc...
 // horrific implementation currently
 func realDistance(p *parser, tk tokenType, number int) int {
 	found := 0
@@ -13,31 +14,68 @@ func realDistance(p *parser, tk tokenType, number int) int {
 	inValue := false
 	var prev tokenType
 	prev = tknNone
-	for _, t := range p.lexer.tokens {
-		if t.tkntype == tk {
-			found++
-			if found == number {
-				return count
-			}
-		}
-		switch t.tkntype {
-		case tknValue, tknString:
-			if prev == tknValue || prev == tknString {
-				inValue = false
-				count++
-			} else {
-				if !inValue {
-					count++
-					inValue = true
+	for i, t := range p.lexer.tokens {
+		if !inValue {
+			if t.tkntype == tk {
+				found++
+				if found == number {
+					return count
 				}
 			}
-			break
-		case tknOpenSquare, tknCloseSquare, tknNumber, tknOr, tknColon:
-			// do nothing
-			break
-		default:
-			inValue = false
+			switch t.tkntype {
+			case tknValue, tknString, tknNumber:
+				//fmt.Printf("in value\n")
+				inValue = true
+			}
 			count++
+		} else {
+			switch t.tkntype {
+			case tknValue, tknString, tknNumber:
+				switch prev {
+				case tknValue, tknString, tknNumber:
+					if t.tkntype == tk {
+						found++
+						if found == number {
+							return count
+						}
+					}
+					count++
+					break
+				}
+				break
+			case tknColon:
+				// [2:string] --> ignore
+				// [string:2] --> ignore
+				// x : string --> keep
+				if i < len(p.lexer.tokens)-1 && i > 0 {
+					if p.lexer.tokens[i+1].tkntype != tknNumber && p.lexer.tokens[i-1].tkntype != tknNumber {
+						//fmt.Printf("%s --> hi colon xxx %d\n", p.lexer.buffer, i)
+						inValue = false
+						if t.tkntype == tk {
+							found++
+							if found == number {
+								return count
+							}
+						}
+						count++
+					} else {
+						//fmt.Printf("value colon\n ")
+					}
+				}
+			case tknOpenSquare, tknCloseSquare, tknOr:
+				// do nothing
+				break
+			default:
+				//fmt.Printf("value ended with: %d\n", t.tkntype)
+				inValue = false
+				if t.tkntype == tk {
+					found++
+					if found == number {
+						return count
+					}
+				}
+				count++
+			}
 		}
 		prev = t.tkntype
 	}
@@ -101,14 +139,9 @@ func isPrototypeFieldWithOffset(p *parser, offset int, extra int) bool {
 	// key : value
 	return (realDistance(p, tknValue, 1+extra) == offset && realDistance(p, tknColon, 1) == 1+offset) ||
 		// "key" : value
-		(realDistance(p, tknString, 1+extra) == offset && realDistance(p, tknColon, 1) == 1+offset) ||
-		// <key> : value
-		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknColon, 1) == 3+offset) ||
-		// <3:key> : value
-		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknColon, 2) == 5+offset) ||
-		// <key:3> : value is the same as above
-		// <3:key:5> : value
-		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknColon, 3) == 7+offset)
+		(realDistance(p, tknString, 1) == offset && realDistance(p, tknColon, 1) == 1+offset) ||
+		// <key> : values || <3:key> : value || <key:3> : value || <3:key:3> : value
+		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknColon, 1) == 3+offset)
 }
 
 func isPrototypeElement(p *parser) bool {

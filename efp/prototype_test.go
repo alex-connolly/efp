@@ -40,7 +40,7 @@ func TestPrototypeFieldBasic(t *testing.T) {
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil && p.prototype.fields["name"] != nil, "")
-	assertNow(t, p.prototype.fields["name"].types.value == "string", "")
+	assertNow(t, p.prototype.fields["name"].types[0].value == "string", "")
 }
 
 func TestPrototypeFieldBasicDisjunction(t *testing.T) {
@@ -48,11 +48,10 @@ func TestPrototypeFieldBasicDisjunction(t *testing.T) {
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil && p.prototype.fields["name"] != nil, "")
-	assertNow(t, len(p.prototype.fields["name"]) == 1, "wrong length")
-	assertNow(t, len(p.prototype.fields["name"][0].value.children) == 3, "wrong value length")
-	assertNow(t, p.prototype.fields["name"][0].value.children[0].value == "string", "")
-	assertNow(t, p.prototype.fields["name"][0].value.children[1].value == "int", "")
-	assertNow(t, p.prototype.fields["name"][0].value.children[2].value == "float", "")
+	assertNow(t, len(p.prototype.fields["name"].types) == 3, "wrong length")
+	assertNow(t, p.prototype.fields["name"].types[0].value == "string", "")
+	assertNow(t, p.prototype.fields["name"].types[1].value == "int", "")
+	assertNow(t, p.prototype.fields["name"].types[2].value == "float", "")
 }
 
 func TestPrototypeFieldComplexDisjunction(t *testing.T) {
@@ -60,15 +59,14 @@ func TestPrototypeFieldComplexDisjunction(t *testing.T) {
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields["name"] != nil, "failed for name")
-	assertNow(t, p.prototype.fields["name"][0].value != nil, "failed for value")
-	assertNow(t, p.prototype.fields["name"][0].value.children != nil, "failed for nil children")
-	assertNow(t, len(p.prototype.fields["name"][0].value.children) == 3, "failed for children length")
-	assert(t, p.prototype.fields["name"][0].value.children[0].value == "string", "not string")
-	assert(t, p.prototype.fields["name"][0].value.children[1].value == "a-zA-Z", "wrong regex "+p.prototype.fields["name"][0].value.children[1].value)
+	assertNow(t, p.prototype.fields["name"].types != nil, "failed for nil children")
+	assertNow(t, len(p.prototype.fields["name"].types) == 3, "failed for children length")
+	assert(t, p.prototype.fields["name"].types[0].value == "string", "not string")
+	assert(t, p.prototype.fields["name"].types[1].value == "a-zA-Z", "wrong regex "+p.prototype.fields["name"].types[1].value)
 
-	assertNow(t, p.prototype.fields["name"][0].value.children[2].children != nil, "children 2 children == nil")
-	assert(t, p.prototype.fields["name"][0].value.children[2].children[0].value == "[abc]{5}", "not abc")
-	assert(t, p.prototype.fields["name"][0].value.children[2].isArray, "not array")
+	assertNow(t, p.prototype.fields["name"].types[2].types != nil, "children 2 children == nil")
+	assert(t, p.prototype.fields["name"].types[2].types[0].value == "[abc]{5}", "not abc")
+	assert(t, p.prototype.fields["name"].types[2].isArray, "not array")
 }
 
 func TestPrototypeFieldAliased(t *testing.T) {
@@ -80,7 +78,7 @@ func TestPrototypeFieldArray(t *testing.T) {
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil, "standard shouldn't be nil")
-	assertNow(t, len(p.prototype.fields["name"]) == 1, "standard wrong length")
+	assertNow(t, len(p.prototype.fields["name"].types) == 1, "standard wrong length")
 }
 
 func TestPrototypeFieldArrayMinimum(t *testing.T) {
@@ -89,7 +87,7 @@ func TestPrototypeFieldArrayMinimum(t *testing.T) {
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil, "minimum shouldn't be nil")
-	assertNow(t, len(p.prototype.fields["name"]) == 1, "minimum wrong length")
+	assertNow(t, len(p.prototype.fields["name"].types) == 1, "minimum wrong length")
 }
 
 func TestPrototypeFieldArrayMaximum(t *testing.T) {
@@ -98,7 +96,7 @@ func TestPrototypeFieldArrayMaximum(t *testing.T) {
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil, "maximum shouldn't be nil")
-	assertNow(t, len(p.prototype.fields["name"]) == 1, "maximum wrong length")
+	assertNow(t, len(p.prototype.fields["name"].types) == 1, "maximum wrong length")
 }
 
 func TestPrototypeFieldArrayFixed(t *testing.T) {
@@ -107,7 +105,7 @@ func TestPrototypeFieldArrayFixed(t *testing.T) {
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil, "fixed shouldn't be nil")
-	assertNow(t, len(p.prototype.fields["name"]) == 1, "fixed wrong length")
+	assertNow(t, len(p.prototype.fields["name"].types) == 1, "fixed wrong length")
 }
 
 func TestPrototypeFieldRegex(t *testing.T) {
@@ -115,7 +113,7 @@ func TestPrototypeFieldRegex(t *testing.T) {
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil, "r shouldn't be nil")
-	assertNow(t, len(p.prototype.fields["[a-z]+"]) == 1, "r wrong length")
+	assertNow(t, len(p.prototype.fields["[a-z]+"].types) == 1, "r wrong length")
 }
 
 func TestPrototypeFieldRegexEmptyBounds(t *testing.T) {
@@ -123,7 +121,7 @@ func TestPrototypeFieldRegexEmptyBounds(t *testing.T) {
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil, "r shouldn't be nil")
-	assertNow(t, len(p.prototype.fields["[a-z]+"]) == 1, "r wrong length")
+	assertNow(t, len(p.prototype.fields["[a-z]+"].types) == 1, "r wrong length")
 }
 
 func TestPrototypeFieldRegexMinimumBounds(t *testing.T) {
@@ -131,7 +129,7 @@ func TestPrototypeFieldRegexMinimumBounds(t *testing.T) {
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil, "r shouldn't be nil")
-	assertNow(t, len(p.prototype.fields["[a-z]+"]) == 1, "r wrong length")
+	assertNow(t, len(p.prototype.fields["[a-z]+"].types) == 1, "r wrong length")
 }
 
 func TestPrototypeFieldRegexMaximumBounds(t *testing.T) {
@@ -139,5 +137,5 @@ func TestPrototypeFieldRegexMaximumBounds(t *testing.T) {
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil, "r shouldn't be nil")
-	assertNow(t, len(p.prototype.fields["[a-z]+"]) == 1, "r wrong length")
+	assertNow(t, len(p.prototype.fields["[a-z]+"].types) == 1, "r wrong length")
 }

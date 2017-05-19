@@ -155,7 +155,6 @@ func (p *parser) parsevalue(fv *value) {
 
 func (p *parser) parseArrayDeclaration(fv *value) {
 	p.next() // eat [
-	fv.isArray = true
 	for p.current().tkntype != tknCloseSquare {
 		switch p.current().tkntype {
 		case tknString, tknValue, tknNumber:
@@ -198,13 +197,15 @@ func (fv *value) addChild(regex string) {
 	fv.children = append(fv.children, val)
 }
 
-func (p *parser) parseTypeDeclaration(t *typeDeclaration) {
+func (p *parser) parseTypeDeclaration(t []*typeDeclaration) {
 	switch p.current().tkntype {
 	case tknOpenSquare:
 		p.parsePrototypeArrayDeclaration(t)
 		break
 	case tknValue, tknNumber, tknString:
-		t.addChild(p.lexer.tokenString(p.next()))
+		td := new(typeDeclaration)
+		td.value = p.lexer.tokenString(p.next())
+		t = append(t, td)
 		break
 	}
 	if p.index >= len(p.lexer.tokens) {
@@ -216,20 +217,18 @@ func (p *parser) parseTypeDeclaration(t *typeDeclaration) {
 	}
 }
 
-func (p *parser) parsePrototypeArrayDeclaration(t *typeDeclaration) {
+func (p *parser) parsePrototypeArrayDeclaration(t []*typeDeclaration) {
 	p.enforceNext(tknOpenSquare, "Expected '['") // eat [
-	t.isArray = true
 	if p.current().tkntype == tknNumber {
 		num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
-		t.min = num
+		t[len(t)-1].min = num
 		p.enforceNext(tknColon, "Array minimum must be followed by ':'") // eat ":"
 	}
 	p.parseTypeDeclaration(t)
 	if p.current().tkntype == tknColon {
-
 		p.enforceNext(tknColon, "Array maximum must be preceded by ':'") // eat ":"
 		num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
-		t.max = num
+		t[len(t)-1].max = num
 	}
 	p.enforceNext(tknCloseSquare, "Expected ']'") // eat ]
 }
@@ -251,7 +250,7 @@ func parseFieldAlias(p *parser) {
 	f.key = new(key)
 	p.parseKey(f.key)
 	p.enforceNext(tknColon, "Expected ':'") // eat ":"
-	f.types = new(typeDeclaration)
+	f.types = make([]*typeDeclaration, 0)
 	p.parseTypeDeclaration(f.types)
 	p.addFieldAlias(alias, f)
 }
@@ -263,7 +262,8 @@ func parseElementAlias(p *parser) {
 	p.enforceNext(tknAssign, "Expected '='") // eat "="
 	e.key = new(key)
 	p.parseKey(e.key)
-	p.parsePrototypeParameters(e)
+	e.parameters = make([]*typeDeclaration, 0)
+	p.parsePrototypeParameters(e.parameters)
 	p.enforceNext(tknOpenBrace, "Expected '{'") // eat "{"
 	p.addElementAlias(alias, e)
 }
@@ -349,7 +349,7 @@ func parsePrototypeField(p *parser) {
 	f.key = new(key)
 	p.parseKey(f.key)
 	p.enforceNext(tknColon, "Expected ':'") // eat :
-	f.types = new(typeDeclaration)
+	f.types = make([]*typeDeclaration, 0)
 	p.parseTypeDeclaration(f.types)
 	p.addPrototypeField(f)
 }
@@ -358,12 +358,13 @@ func parsePrototypeElement(p *parser) {
 	e := new(protoElement)
 	e.key = new(key)
 	p.parseKey(e.key)
-	p.parsePrototypeParameters(e)
+	e.parameters = make([]*typeDeclaration, 0)
+	p.parsePrototypeParameters(e.parameters)
 	p.enforceNext(tknOpenBrace, "Expected '{'") // eat {
 	p.addPrototypeElement(e)
 }
 
-func (p *parser) parsePrototypeParameters(e *protoElement) {
+func (p *parser) parsePrototypeParameters(t []*typeDeclaration) {
 	// must use current to stop accidentally double-eating the open brace
 	if p.current().tkntype != tknOpenBracket {
 		return
@@ -374,22 +375,12 @@ func (p *parser) parsePrototypeParameters(e *protoElement) {
 		case tknComma:
 			p.next()
 			break
-		case tknValue:
-		case tknString:
-			p.parsePrototypeParameter()
+		case tknValue, tknString:
+			p.parseTypeDeclaration(t)
 			break
 		}
 	}
-	p.enforceNext(tknCloseBracket, "Parameters must close with '('") // eat ")"
-}
-
-func (p *parser) parsePrototypeParameter() {
-	if p.prototype.parameters == nil {
-		p.prototype.parameters = make([]*typeDeclaration, 0)
-	}
-	t := new(typeDeclaration)
-	p.parseTypeDeclaration(t)
-	p.prototype.parameters = append(p.prototype.parameters, t)
+	p.enforceNext(tknCloseBracket, "Parameters must close with ')'") // eat ")"
 }
 
 func (p *parser) addPrototypeElement(e *protoElement) {
@@ -481,7 +472,7 @@ func parsePrototypeFieldAlias(p *parser) {
 	f.key = new(key)
 	p.parseKey(f.key)
 	p.enforceNext(tknAssign, "Expected ':'") // eat =
-	f.types = new(typeDeclaration)
+	f.types = make([]*typeDeclaration, 0)
 	p.parseTypeDeclaration(f.types)
 	p.addFieldAlias(alias, f)
 }

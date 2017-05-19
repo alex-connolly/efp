@@ -28,10 +28,9 @@ type typeDeclaration struct {
 	min     int
 	max     int
 }
-
 type protoField struct {
 	key   *key
-	types *typeDeclaration
+	types []*typeDeclaration
 }
 
 type protoElement struct {

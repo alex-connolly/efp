@@ -291,71 +291,53 @@ x : string
 
 ```
 
-![Alt text](https://g.gravizo.com/svg?
-  digraph G {
-      aize ="4,4";
-      string [shape=box];
-  }
-)
-
 ```go
 x : string|int
 
 ```
 
-![Alt text](https://g.gravizo.com/svg?
-  digraph G {
-      aize ="4,4";
-      string [shape=box];
-      int [shape=box];
-  }
-)
-
 ```go
 x : [string|int]
 
 ```
-![Alt text](https://g.gravizo.com/svg?
-  digraph G {
-    aize ="4,4";
-    array [shape=box]
-    array -> string [shape=box];
-    array -> int [shape=box];
-  }
-)
 
 ```go
 x : [string]|[int]
 
 ```
 
-![Alt text](https://g.gravizo.com/svg?
-  digraph G {
-      aize ="4,4";
-      array [shape=box]
-      array -> array -> string [shape=box];
-      array [shape=box]
-      array -> int [shape=box];
-  }
-)
-
 ```go
 x : [[string]]|[int]
 
 ```
 
-![Alt text](https://g.gravizo.com/svg?
-  digraph G {
-      aize ="4,4";
-      array [shape=box]
-      array -> array [shape=box]
-      array -> string [shape=box];
-      array [shape=box]
-      array -> int [shape=box];
-  }
-)
-
 ## Accessing Values
+
+If a field is declared in the simple syntax ```key = value```, then the value of the field may be obtained as follows:
+
+```go
+// where e is the current scope
+value := e.fields["key"][0].values[0]
+```
+
+For an array declared ```key = [value, value2, value3]```, you can iterate over its contents using:
+
+```go
+for i, v := range e.fields["key"][0].values {
+    fmt.Printf("Value %d: %s", i, v.value)
+}
+```
+
+And for a 2D array (applicable up to n-dimensions), there following is valid:
+
+```go
+for i, v := range e.fields["key"][0].values {
+    for j, val := range v.values {
+        fmt.Printf("Value [%d][%d]: %s", i, j, val.value)
+    }
+}
+```
+
 
 ## Errors
 
