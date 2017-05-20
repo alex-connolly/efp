@@ -59,6 +59,7 @@ func TestParseArrayFieldMinimumInvalid(t *testing.T) {
 	p := basicParser("name : [2:string]")
 	// invalid
 	p.createParseString(`name = ["ender", "me", "him"]`)
+	p.run()
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
 }
@@ -67,6 +68,7 @@ func TestParseArrayFieldMaximumValid(t *testing.T) {
 	// valid
 	p := basicParser("name : [string:2]")
 	p.createParseString(`name = ["ender", "me"]`)
+	p.run()
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, p.scope.fields["name"] != nil, "fields should not be nil")
@@ -80,6 +82,7 @@ func TestParseArrayFieldMaximumInvalid(t *testing.T) {
 	parsePrototypeField(p)
 	// invalid
 	p.createParseString(`name = ["ender", "me", "him"]`)
+	p.run()
 	parseField(p)
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
@@ -90,7 +93,7 @@ func TestParseArrayFieldFixedValid(t *testing.T) {
 	p := basicParser("name : [2:string:2]")
 	parsePrototypeField(p)
 	p.createParseString(`name = ["ender", "me"]`)
-	parseField(p)
+	p.run()
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, p.scope.fields["name"] != nil, "fields should not be nil")
@@ -103,13 +106,13 @@ func TestParseArrayFieldFixedInvalid(t *testing.T) {
 	parsePrototypeField(p)
 	// invalid
 	p.createParseString(`name = ["ender", "me", "him"]`)
-	parseField(p)
+	p.run()
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
 
 	// invalid
 	p.createParseString(`name = ["ender"]`)
-	parseField(p)
+	p.run()
 	assert(t, p.errs != nil, "errs should not be nil")
 	assert(t, p.scope != nil, "p.scope should not be nil")
 }
@@ -120,7 +123,7 @@ func TestParseArrayFieldDisjunctionValid(t *testing.T) {
 	parsePrototypeField(p)
 
 	p.createParseString(`name = ["ender", "me"]`)
-	parseField(p)
+	p.run()
 	assert(t, p.errs == nil, "errs should be nil")
 	assertNow(t, p.scope != nil, "p.scope should not be nil")
 	assertNow(t, len(p.scope.fields["name"]) == 1, "field length wrong")

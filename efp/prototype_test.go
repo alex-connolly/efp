@@ -39,8 +39,10 @@ func TestPrototypeFieldBasic(t *testing.T) {
 	p := basicParser("name : string")
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
-	assertNow(t, p.prototype.fields != nil && p.prototype.fields["name"] != nil, "")
-	assertNow(t, p.prototype.fields["name"].types[0].value == "string", "")
+	assertNow(t, p.prototype != nil, "prototype is nil")
+	assertNow(t, p.prototype.fields != nil && p.prototype.fields["name"] != nil, "fields is nil")
+	assertNow(t, len(p.prototype.fields["name"].types) == 1, "wrong type length")
+	assertNow(t, p.prototype.fields["name"].types[0].value == "string", "wrong type")
 }
 
 func TestPrototypeFieldBasicDisjunction(t *testing.T) {

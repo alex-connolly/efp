@@ -64,6 +64,18 @@ func (p *parser) run() {
 	}
 }
 
+func PrototypeBytes(bytes []byte) (protoElement, []string) {
+
+}
+
+func PrototypeString(prototype string) (protoElement, []string) {
+	return PrototypeBytes([]byte(prototype))
+}
+
+func PrototypeFile(prototype string) (protoElement, []string) {
+
+}
+
 func (p *parser) runPrototypeBytes(bytes []byte) {
 	p.createPrototypeBytes(bytes)
 	p.run()
@@ -130,6 +142,27 @@ func (p *parser) validateKey(key string) string {
 	return ""
 }
 
+func parseDiscoveredAlias(p *parser) {
+	alias := p.lexer.tokenString(p.next())
+	// go up to find element and add it to the scope
+	e := p.prototype
+	found := false
+	for e != nil && !found {
+		if e.fieldAliases != nil && e.fieldAliases[alias] != nil {
+			p.addPrototypeField(e.fieldAliases[alias])
+			found = true
+		}
+		if e.elementAliases != nil && e.elementAliases[alias] != nil {
+			p.addPrototypeElement(e.elementAliases[alias])
+			found = true
+		}
+		e = e.parent
+	}
+	if !found {
+		p.addError(fmt.Sprintf(errAliasNotVisible, alias, p.prototype.key.key))
+	}
+}
+
 func parseField(p *parser) {
 	f := new(field)
 	f.key = new(key)
@@ -137,12 +170,12 @@ func parseField(p *parser) {
 	key := p.validateKey(f.key.key)
 	p.enforceNext(tknAssign, "Expected '='") // eat =
 	f.value = new(value)
-	p.parsevalue(f.value)
+	p.parseValue(f.value)
 	p.validateField(key, f)
 	p.addField(key, f)
 }
 
-func (p *parser) parsevalue(fv *value) {
+func (p *parser) parseValue(fv *value) {
 	switch p.current().tkntype {
 	case tknOpenSquare:
 		p.parseArrayDeclaration(fv)
@@ -200,6 +233,7 @@ func (fv *value) addChild(regex string) {
 func (p *parser) parseTypeDeclaration(t []*typeDeclaration) {
 	switch p.current().tkntype {
 	case tknOpenSquare:
+
 		p.parsePrototypeArrayDeclaration(t)
 		break
 	case tknValue, tknNumber, tknString:
@@ -219,16 +253,20 @@ func (p *parser) parseTypeDeclaration(t []*typeDeclaration) {
 
 func (p *parser) parsePrototypeArrayDeclaration(t []*typeDeclaration) {
 	p.enforceNext(tknOpenSquare, "Expected '['") // eat [
+	current := new(typeDeclaration)
+	t = append(t, current)
+	current.isArray = true
 	if p.current().tkntype == tknNumber {
 		num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
-		t[len(t)-1].min = num
+		current.min = num
 		p.enforceNext(tknColon, "Array minimum must be followed by ':'") // eat ":"
 	}
-	p.parseTypeDeclaration(t)
+	current.types = make([]*typeDeclaration, 0)
+	p.parseTypeDeclaration(current.types)
 	if p.current().tkntype == tknColon {
 		p.enforceNext(tknColon, "Array maximum must be preceded by ':'") // eat ":"
 		num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
-		t[len(t)-1].max = num
+		current.max = num
 	}
 	p.enforceNext(tknCloseSquare, "Expected ']'") // eat ]
 }
@@ -524,13 +562,13 @@ func (p *parser) importPrototypeConstructs() {
 
 func (p *parser) validateField(key string, f *field) bool {
 
-	// check field frequency
+	/* check field frequency
 	if p.prototype.fields[key].key.max != 0 {
 		if len(p.scope.fields[key]) >= p.prototype.fields[key].key.max {
 			p.addError(errDuplicateField)
 			return false
 		}
-	}
+	}*/
 
 	/* check single value regex matching
 	if len(f.value.children) == 1 {

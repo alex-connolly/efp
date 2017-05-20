@@ -19,3 +19,11 @@ const (
 	errInvalidToken       = "Invalid token %s in %s."
 	errInsufficientFields = "Insufficient fields with key %s in element %s."
 )
+
+var standards = map[string]string{
+	"string": `^(.*)$`,
+	"int":    `^([-]?[1-9]\d*|0)$`,
+	"float":  "^([-]?[0-9]+.?[0-9]*|0)$",
+	"bool":   "^(true|false)$",
+	"uint":   `^([1-9]\d*|0)$`,
+}

@@ -55,14 +55,6 @@ type element struct {
 	fields     map[string][]*field
 }
 
-var standards = map[string]string{
-	"string": `^(.*)$`,
-	"int":    `^([-]?[1-9]\d*|0)$`,
-	"float":  "^([-]?([0-9]*[.])?[0-9]+|)$",
-	"bool":   "^(true|false)$",
-	"uint":   `^([1-9]\d*|0)$`,
-}
-
 func (p *protoElement) addStandardAliases() {
 	p.textAliases = standards
 }

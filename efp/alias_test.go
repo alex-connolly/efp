@@ -61,20 +61,29 @@ func TestAliasingFieldAlias(t *testing.T) {
 	p := basicParser(`
         alias x = name : string
         x`)
+	parseFieldAlias(p)
+	parseDiscoveredAlias(p)
+	assertNow(t, p.errs == nil, "errs are not nil")
 	assertNow(t, p.prototype.fields["name"] != nil, "name is nil")
 }
 
 func TestAliasingElementAlias(t *testing.T) {
 	p := basicParser(`
-        alias x = name : string
+        alias x = name {
+
+		}
         x`)
+	parseElementAlias(p)
+	parseDiscoveredAlias(p)
+	assertNow(t, p.errs == nil, "errs are not nil")
+	assertNow(t, p.prototype.fields != nil, "fields is nil")
 	assertNow(t, p.prototype.fields["name"] != nil, "name is nil")
 }
 
 func TestAliasingTextAlias(t *testing.T) {
 	p := basicParser(`
-        alias x = name : string
-        x`)
+        alias x = string
+        name : x`)
 	assertNow(t, p.prototype.fields["name"] != nil, "name is nil")
 }
 
