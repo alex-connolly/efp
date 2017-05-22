@@ -2,7 +2,6 @@ package efp
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
 )
@@ -16,97 +15,12 @@ type parser struct {
 	errs       []string
 }
 
-func (p *parser) Parse(filename string) {
-	f, err := os.Open(filename)
-	if err != nil {
-		fmt.Printf("Failed to open file: file name not found.\n")
-		return
-	}
-	fi, err := f.Stat()
-	if err != nil {
-		fmt.Printf("Failed to read from file.\n")
-		return
-	}
-	bytes := make([]byte, fi.Size())
-	_, err = f.Read(bytes)
-	if err != nil {
-		fmt.Printf("Failed to read from file.\n")
-		return
-	}
-	p.runParserBytes(bytes)
-}
-
-func (p *parser) Prototype(filename string) {
-	f, err := os.Open(filename)
-	if err != nil {
-		fmt.Printf("Failed to open file: file name not found.\n")
-		return
-	}
-	fi, err := f.Stat()
-	if err != nil {
-		fmt.Printf("Failed to read from file.\n")
-		return
-	}
-	bytes := make([]byte, fi.Size())
-	_, err = f.Read(bytes)
-	if err != nil {
-		fmt.Printf("Failed to read from file.\n")
-		return
-	}
-	p.runPrototypeBytes(bytes)
-}
-
 func (p *parser) run() {
 	for _, c := range p.constructs {
 		if c.is(p) {
 			c.process(p)
 		}
 	}
-}
-
-func PrototypeBytes(bytes []byte) (protoElement, []string) {
-
-}
-
-func PrototypeString(prototype string) (protoElement, []string) {
-	return PrototypeBytes([]byte(prototype))
-}
-
-func PrototypeFile(prototype string) (protoElement, []string) {
-
-}
-
-func (p *parser) runPrototypeBytes(bytes []byte) {
-	p.createPrototypeBytes(bytes)
-	p.run()
-}
-
-func (p *parser) runParserBytes(bytes []byte) {
-	p.createPrototypeBytes(bytes)
-	p.run()
-}
-
-func (p *parser) createPrototypeBytes(bytes []byte) {
-	p.importPrototypeConstructs()
-	p.lexer = lex(bytes)
-	p.prototype = new(protoElement)
-	p.prototype.addStandardAliases()
-}
-
-func (p *parser) createParseBytes(bytes []byte) {
-	p.importParseConstructs()
-	p.lexer = lex(bytes)
-	p.scope = new(element)
-}
-
-func (p *parser) createParseString(text string) {
-	p.index = 0
-	p.createParseBytes([]byte(text))
-}
-
-func (p *parser) createPrototypeString(text string) {
-	p.index = 0
-	p.createPrototypeBytes([]byte(text))
 }
 
 // A construct is a repeated pattern within an efp file
@@ -331,6 +245,16 @@ func (p *parser) parseKeyMaximum(k *key) {
 	p.next() // eat :
 }
 
+func createPrototypeParser(bytes []byte) *parser {
+	p := new(parser)
+	p.index = 0
+	p.importPrototypeConstructs()
+	p.lexer = lex(bytes)
+	p.prototype = new(protoElement)
+	p.prototype.addStandardAliases()
+	return p
+}
+
 func (p *parser) parseKey(k *key) {
 	switch p.current().tkntype {
 	case tknValue:
@@ -494,7 +418,7 @@ func parseElementClosure(p *parser) {
 	p.next()
 }
 
-func (p *parser) importParseConstructs() {
+func (p *parser) importValidateConstructs() {
 	p.constructs = []construct{
 		construct{"field", isField, parseField},
 		construct{"element", isElement, parseElement},

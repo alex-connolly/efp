@@ -1,6 +1,9 @@
 package efp
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestPrototypeFieldAlias(t *testing.T) {
 	// test only field alias
@@ -31,7 +34,8 @@ func TestPrototypeRecursiveElementAlias(t *testing.T) {
 
 func basicParser(data string) *parser {
 	p := new(parser)
-	p.createPrototypeString(data)
+	p.lexer = lexString(data)
+	p.index = 0
 	return p
 }
 
@@ -127,17 +131,14 @@ func TestPrototypeFieldRegexEmptyBounds(t *testing.T) {
 }
 
 func TestPrototypeFieldRegexMinimumBounds(t *testing.T) {
-	p := basicParser(`<2:"[a-z]+"> : string`)
-	assert(t, isPrototypeField(p), "not prototype field")
-	parsePrototypeField(p)
-	assertNow(t, p.prototype.fields != nil, "r shouldn't be nil")
-	assertNow(t, len(p.prototype.fields["[a-z]+"].types) == 1, "r wrong length")
+	p, _ := PrototypeString(`<2:"[a-z]+"> : string`)
+	assertNow(t, p.fields != nil, "r shouldn't be nil")
+	assertNow(t, len(p.fields["[a-z]+"].types) == 1, "r wrong length")
 }
 
 func TestPrototypeFieldRegexMaximumBounds(t *testing.T) {
-	p := basicParser(`<"[a-z]+":2> : string`)
-	assert(t, isPrototypeField(p), "not prototype field")
-	parsePrototypeField(p)
-	assertNow(t, p.prototype.fields != nil, "r shouldn't be nil")
-	assertNow(t, len(p.prototype.fields["[a-z]+"].types) == 1, "r wrong length")
+	p, _ := PrototypeString(`<"[a-z]+":2> : string`)
+	assertNow(t, p.fields != nil, "r shouldn't be nil")
+	assertNow(t, len(p.fields) != 1, "wrong field length")
+	assertNow(t, len(p.fields["[a-z]+"].types) == 1, fmt.Sprintf("r wrong length (%d)", len(p.fields["[a-z]+"].types)))
 }
