@@ -7,7 +7,7 @@ import (
 
 func TestPrototypeFieldAlias(t *testing.T) {
 	// test only field alias
-	p := basicParser(`alias x = key : "value"`)
+	p := createPrototypeParserString(`alias x = key : "value"`)
 	assert(t, isFieldAlias(p), "not field alias")
 	parseFieldAlias(p)
 	assertNow(t, p.prototype.fieldAliases["x"] != nil, "")
@@ -16,62 +16,56 @@ func TestPrototypeFieldAlias(t *testing.T) {
 
 func TestPrototypeElementAlias(t *testing.T) {
 	// test only element alias
-	p := basicParser(`alias x = key {}`)
-	assert(t, isElementAlias(p), "")
+	p := createPrototypeParserString(`alias x = key {}`)
+	assert(t, isElementAlias(p), "not element alias")
 	parseElementAlias(p)
-	assertNow(t, p.prototype.elementAliases["x"] != nil, "")
-	assertNow(t, p.prototype.elementAliases["x"].key.key == "key", "")
+	assertNow(t, p.prototype.elementAliases["x"] != nil, "x is nil")
+	assertNow(t, p.prototype.elementAliases["x"].key.key == "key",
+		fmt.Sprintf("key should be 'key', not %s", p.prototype.elementAliases["x"].key.key))
 }
 
 func TestPrototypeRecursiveElementAlias(t *testing.T) {
 	// test only element alias
-	p := basicParser(`alias x = key {}`)
-	assert(t, isElementAlias(p), "")
+	p := createPrototypeParserString(`alias x = key {}`)
+	assert(t, isElementAlias(p), "not element alias")
 	parseElementAlias(p)
-	assertNow(t, p.prototype.elementAliases["x"] != nil, "")
-	assertNow(t, p.prototype.elementAliases["x"].key.key == "key", "")
-}
-
-func basicParser(data string) *parser {
-	p := new(parser)
-	p.lexer = lexString(data)
-	p.index = 0
-	return p
+	assertNow(t, p.prototype.elementAliases["x"] != nil, "x is nil")
+	assertNow(t, p.prototype.elementAliases["x"].key.key == "key",
+		fmt.Sprintf("key should be 'key', not %s", p.prototype.elementAliases["x"].key.key))
 }
 
 func TestPrototypeFieldBasic(t *testing.T) {
-	p := basicParser("name : string")
+	p := createPrototypeParserString("name : string")
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype != nil, "prototype is nil")
 	assertNow(t, p.prototype.fields != nil && p.prototype.fields["name"] != nil, "fields is nil")
 	assertNow(t, len(p.prototype.fields["name"].types) == 1, "wrong type length")
-	assertNow(t, p.prototype.fields["name"].types[0].value == "string", "wrong type")
+	assertNow(t, p.prototype.fields["name"].types[0].value.String() == standards["string"].value, "wrong type")
 }
 
 func TestPrototypeFieldBasicDisjunction(t *testing.T) {
-	p := basicParser("name : string|int|float")
+	p := createPrototypeParserString("name : string|int|float")
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil && p.prototype.fields["name"] != nil, "")
 	assertNow(t, len(p.prototype.fields["name"].types) == 3, "wrong length")
-	assertNow(t, p.prototype.fields["name"].types[0].value == "string", "")
-	assertNow(t, p.prototype.fields["name"].types[1].value == "int", "")
-	assertNow(t, p.prototype.fields["name"].types[2].value == "float", "")
+	assertNow(t, p.prototype.fields["name"].types[0].value.String() == standards["string"].value, "")
+	assertNow(t, p.prototype.fields["name"].types[1].value.String() == standards["int"].value, "")
+	assertNow(t, p.prototype.fields["name"].types[2].value.String() == standards["float"].value, "")
 }
 
 func TestPrototypeFieldComplexDisjunction(t *testing.T) {
-	p := basicParser(`name : string|"a-zA-Z"|["[abc]{5}":2]`)
+	p := createPrototypeParserString(`name : string|"[a-zA-Z]+"|["[abc]{5}":2]`)
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields["name"] != nil, "failed for name")
 	assertNow(t, p.prototype.fields["name"].types != nil, "failed for nil children")
 	assertNow(t, len(p.prototype.fields["name"].types) == 3, "failed for children length")
-	assert(t, p.prototype.fields["name"].types[0].value == "string", "not string")
-	assert(t, p.prototype.fields["name"].types[1].value == "a-zA-Z", "wrong regex "+p.prototype.fields["name"].types[1].value)
+	assert(t, p.prototype.fields["name"].types[1].value.String() == "[a-zA-Z]+", "wrong regex "+p.prototype.fields["name"].types[1].value.String())
 
 	assertNow(t, p.prototype.fields["name"].types[2].types != nil, "children 2 children == nil")
-	assert(t, p.prototype.fields["name"].types[2].types[0].value == "[abc]{5}", "not abc")
+	assert(t, p.prototype.fields["name"].types[2].types[0].value.String() == "[abc]{5}", "not abc")
 	assert(t, p.prototype.fields["name"].types[2].isArray, "not array")
 }
 
@@ -80,7 +74,7 @@ func TestPrototypeFieldAliased(t *testing.T) {
 }
 
 func TestPrototypeFieldArray(t *testing.T) {
-	p := basicParser("name : [string]")
+	p := createPrototypeParserString("name : [string]")
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil, "standard shouldn't be nil")
@@ -88,7 +82,7 @@ func TestPrototypeFieldArray(t *testing.T) {
 }
 
 func TestPrototypeFieldArrayMinimum(t *testing.T) {
-	p := basicParser("name : [2:string]")
+	p := createPrototypeParserString("name : [2:string]")
 	assertNow(t, len(p.lexer.tokens) == 7, "wrong token length")
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
@@ -97,7 +91,7 @@ func TestPrototypeFieldArrayMinimum(t *testing.T) {
 }
 
 func TestPrototypeFieldArrayMaximum(t *testing.T) {
-	p := basicParser("name : [string:2]")
+	p := createPrototypeParserString("name : [string:2]")
 	assertNow(t, len(p.lexer.tokens) == 7, "wrong token length")
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
@@ -106,7 +100,7 @@ func TestPrototypeFieldArrayMaximum(t *testing.T) {
 }
 
 func TestPrototypeFieldArrayFixed(t *testing.T) {
-	p := basicParser("name : [2:string:2]")
+	p := createPrototypeParserString("name : [2:string:2]")
 	assertNow(t, len(p.lexer.tokens) == 9, "wrong token length")
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
@@ -115,7 +109,7 @@ func TestPrototypeFieldArrayFixed(t *testing.T) {
 }
 
 func TestPrototypeFieldRegex(t *testing.T) {
-	p := basicParser(`"[a-z]+" : string`)
+	p := createPrototypeParserString(`"[a-z]+" : string`)
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil, "r shouldn't be nil")
@@ -123,16 +117,18 @@ func TestPrototypeFieldRegex(t *testing.T) {
 }
 
 func TestPrototypeFieldRegexEmptyBounds(t *testing.T) {
-	p := basicParser(`<"[a-z]+"> : string`)
+	p := createPrototypeParserString(`<"[a-z]+"> : string`)
 	assert(t, isPrototypeField(p), "not prototype field")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil, "r shouldn't be nil")
+	assertNow(t, len(p.prototype.fields) != 1, "wrong field length")
 	assertNow(t, len(p.prototype.fields["[a-z]+"].types) == 1, "r wrong length")
 }
 
 func TestPrototypeFieldRegexMinimumBounds(t *testing.T) {
 	p, _ := PrototypeString(`<2:"[a-z]+"> : string`)
 	assertNow(t, p.fields != nil, "r shouldn't be nil")
+	assertNow(t, len(p.fields) != 1, "wrong field length")
 	assertNow(t, len(p.fields["[a-z]+"].types) == 1, "r wrong length")
 }
 

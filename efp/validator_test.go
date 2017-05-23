@@ -7,7 +7,7 @@ func TestValidateField(t *testing.T) {
 }
 
 func TestValidateKey(t *testing.T) {
-	p := basicParser("name : string")
+	p := createPrototypeParserString("name : string")
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields["name"] != nil, "fields is nil")
 	// valid example
@@ -15,7 +15,7 @@ func TestValidateKey(t *testing.T) {
 	assertNow(t, p.errs == nil, "Errors not nil")
 	assert(t, key == "name", "Failed equality test")
 
-	p = basicParser(`"[a-z]+" : string`)
+	p = createPrototypeParserString(`"[a-z]+" : string`)
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields["[a-z]+"] != nil, "fields is nil")
 	// valid example
@@ -25,7 +25,7 @@ func TestValidateKey(t *testing.T) {
 }
 
 func TestValidateKeyInvalidRegex(t *testing.T) {
-	p := basicParser(`"[a-z" : string`)
+	p := createPrototypeParserString(`"[a-z" : string`)
 	parsePrototypeField(p)
 	assertNow(t, p.errs != nil, "should be an error")
 }

@@ -2,59 +2,63 @@ package efp
 
 import "regexp"
 
-type field struct {
-	alias string
-	key   *key
-	value *value
+type Field struct {
+	alias  string
+	key    *Key
+	values []*Value
 }
 
-type key struct {
+type Key struct {
 	key   string
 	regex *regexp.Regexp
 	min   int
 	max   int
 }
 
-type value struct {
-	parent   *value
-	value    string
-	children []*value
+type Value struct {
+	value  string
+	values []*Value
 }
 
-type typeDeclaration struct {
+type TypeDeclaration struct {
 	isArray bool
-	types   []*typeDeclaration
-	value   string
+	types   []*TypeDeclaration
+	value   *regexp.Regexp
 	min     int
 	max     int
 }
-type protoField struct {
-	key   *key
-	types []*typeDeclaration
+type ProtoField struct {
+	key   *Key
+	types []*TypeDeclaration
 }
 
-type protoElement struct {
+type ProtoElement struct {
 	alias          string
-	key            *key
-	parent         *protoElement
-	parameters     []*typeDeclaration
-	fields         map[string]*protoField
-	fieldAliases   map[string]*protoField
-	elements       map[string]*protoElement
-	elementAliases map[string]*protoElement
+	key            *Key
+	parent         *ProtoElement
+	parameters     []*TypeDeclaration
+	fields         map[string]*ProtoField
+	fieldAliases   map[string]*ProtoField
+	elements       map[string]*ProtoElement
+	elementAliases map[string]*ProtoElement
 	aliases        []string
-	textAliases    map[string]string
+	textAliases    map[string]TextAlias // leave as token for recursion
 }
 
-type element struct {
+type TextAlias struct {
+	value       string
+	isRecursive bool
+}
+
+type Element struct {
 	alias      string
-	key        *key
-	parent     *element
-	parameters []*value
-	elements   map[string][]*element
-	fields     map[string][]*field
+	key        *Key
+	parent     *Element
+	parameters []*Value
+	elements   map[string][]*Element
+	fields     map[string][]*Field
 }
 
-func (p *protoElement) addStandardAliases() {
+func (p *ProtoElement) addStandardAliases() {
 	p.textAliases = standards
 }

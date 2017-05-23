@@ -5,22 +5,20 @@ import (
 	"os"
 )
 
-func PrototypeBytes(bytes []byte) (*protoElement, []string) {
-	p := new(parser)
-	p.index = 0
-	p.importPrototypeConstructs()
-	p.lexer = lex(bytes)
-	p.prototype = new(protoElement)
-	p.prototype.addStandardAliases()
+func PrototypeBytes(bytes []byte) (*ProtoElement, []string) {
+	p := createPrototypeParser(bytes)
 	p.run()
+
 	return p.prototype, p.errs
 }
 
-func PrototypeString(prototype string) (*protoElement, []string) {
+// PrototypeString forms a prototype element from an input string
+func PrototypeString(prototype string) (*ProtoElement, []string) {
 	return PrototypeBytes([]byte(prototype))
 }
 
-func PrototypeFile(filename string) (*protoElement, []string) {
+// PrototypeFile forms a prototype element from an input file
+func PrototypeFile(filename string) (*ProtoElement, []string) {
 	f, err := os.Open(filename)
 	if err != nil {
 		return nil, []string{fmt.Sprintf("Failed to open file: file name %s not found.", filename)}
@@ -38,21 +36,25 @@ func PrototypeFile(filename string) (*protoElement, []string) {
 }
 
 // ValidateBytes against the
-func (e *protoElement) ValidateBytes(bytes []byte) (*element, []string) {
+func (e *ProtoElement) ValidateBytes(bytes []byte) (*Element, []string) {
 	p := new(parser)
 	p.index = 0
 	p.importValidateConstructs()
 	p.lexer = lex(bytes)
 	p.prototype = e
+	p.scope = new(Element)
+	p.scope.key = new(Key)
+	p.scope.key.key = "parent"
 	p.run()
+	p.end()
 	return p.scope, p.errs
 }
 
-func (p *protoElement) ValidateString(data string) (*element, []string) {
+func (p *ProtoElement) ValidateString(data string) (*Element, []string) {
 	return p.ValidateBytes([]byte(data))
 }
 
-func (p *protoElement) ValidateFile(filename string) (*element, []string) {
+func (p *ProtoElement) ValidateFile(filename string) (*Element, []string) {
 	f, err := os.Open(filename)
 	if err != nil {
 		return nil, []string{fmt.Sprintf("Failed to open file: file name %s not found.", filename)}

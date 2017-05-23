@@ -6,13 +6,14 @@ import (
 )
 
 func TestAliasingStandardAliases(t *testing.T) {
-	p := basicParser("")
+	p := createPrototypeParserString("")
 	assert(t, len(p.prototype.textAliases) == len(standards), "wrong number of standard aliases")
 }
 
 func TestAliasingStandardInt(t *testing.T) {
-	p := basicParser("")
-	regex, err := regexp.Compile(p.prototype.textAliases["int"])
+	p := createPrototypeParserString("")
+	assertNow(t, p.prototype.textAliases != nil, "text aliases is nil")
+	regex, err := regexp.Compile(p.prototype.textAliases["int"].value)
 	assertNow(t, err == nil, "error compiling int regex")
 	assert(t, regex.MatchString("99"), "int regex didn't match")
 	assert(t, regex.MatchString("0"), "int regex didn't match")
@@ -23,8 +24,8 @@ func TestAliasingStandardInt(t *testing.T) {
 }
 
 func TestAliasingStandardUInt(t *testing.T) {
-	p := basicParser("")
-	regex, err := regexp.Compile(p.prototype.textAliases["uint"])
+	p := createPrototypeParserString("")
+	regex, err := regexp.Compile(p.prototype.textAliases["uint"].value)
 	assertNow(t, err == nil, "error compiling uint regex")
 	assert(t, regex.MatchString("99"), "uint regex didn't match")
 	assert(t, regex.MatchString("0"), "uint regex didn't match")
@@ -34,8 +35,8 @@ func TestAliasingStandardUInt(t *testing.T) {
 }
 
 func TestAliasingStandardFloat(t *testing.T) {
-	p := basicParser("")
-	regex, err := regexp.Compile(p.prototype.textAliases["float"])
+	p := createPrototypeParserString("")
+	regex, err := regexp.Compile(p.prototype.textAliases["float"].value)
 	assertNow(t, err == nil, "error compiling float regex")
 	assert(t, regex.MatchString("99"), "float regex didn't match")
 	assert(t, regex.MatchString("0"), "float regex didn't match")
@@ -47,8 +48,8 @@ func TestAliasingStandardFloat(t *testing.T) {
 }
 
 func TestAliasingStandardBool(t *testing.T) {
-	p := basicParser("")
-	regex, err := regexp.Compile(p.prototype.textAliases["bool"])
+	p := createPrototypeParserString("")
+	regex, err := regexp.Compile(p.prototype.textAliases["bool"].value)
 	assertNow(t, err == nil, "error compiling bool regex")
 	assert(t, regex.MatchString("true"), "bool regex didn't match")
 	assert(t, regex.MatchString("false"), "bool regex didn't match")
@@ -58,7 +59,7 @@ func TestAliasingStandardBool(t *testing.T) {
 }
 
 func TestAliasingFieldAlias(t *testing.T) {
-	p := basicParser(`
+	p := createPrototypeParserString(`
         alias x = name : string
         x`)
 	parseFieldAlias(p)
@@ -68,7 +69,7 @@ func TestAliasingFieldAlias(t *testing.T) {
 }
 
 func TestAliasingElementAlias(t *testing.T) {
-	p := basicParser(`
+	p := createPrototypeParserString(`
         alias x = name {
 
 		}
@@ -81,14 +82,14 @@ func TestAliasingElementAlias(t *testing.T) {
 }
 
 func TestAliasingTextAlias(t *testing.T) {
-	p := basicParser(`
+	p := createPrototypeParserString(`
         alias x = string
         name : x`)
 	assertNow(t, p.prototype.fields["name"] != nil, "name is nil")
 }
 
 func TestAliasingDoubleIndirection(t *testing.T) {
-	p := basicParser(`
+	p := createPrototypeParserString(`
         alias y = string
         alias x = name : y
         x`)
@@ -97,7 +98,7 @@ func TestAliasingDoubleIndirection(t *testing.T) {
 
 // test that element recursion is allowed
 func TestAliasingRecursionValid(t *testing.T) {
-	p := basicParser(`
+	p := createPrototypeParserString(`
         alias p = x {
             p
         }
@@ -107,6 +108,6 @@ func TestAliasingRecursionValid(t *testing.T) {
 
 // test that field recursion is disallowed
 func TestAliasingRecursionInvalid(t *testing.T) {
-	p := basicParser(`alias x = x`)
+	p := createPrototypeParserString(`alias x = x`)
 	assertNow(t, p.errs != nil, "errs should not be nil")
 }
