@@ -7,12 +7,11 @@ import (
 
 func TestParseSimpleFieldValid(t *testing.T) {
 	p, _ := PrototypeString("name : string")
-
 	assertNow(t, len(p.fields) == 1, "wrong field length")
 	// valid example
 	e, errs := p.ValidateString(`name = "ender"`)
-	fmt.Println(errs)
 	assert(t, errs == nil, "errs should be nil")
+
 	assertNow(t, e != nil, "e should not be nil")
 	assertNow(t, len(e.fields["name"]) == 1, "field length wrong")
 	assertNow(t, e.fields["name"][0] != nil, "name nil")
@@ -41,6 +40,7 @@ func TestParseArrayFieldValid(t *testing.T) {
 	assertNow(t, e.fields["name"] != nil, "fields should not be nil")
 	assertNow(t, len(e.fields["name"]) == 1, "didn't find field")
 	assertNow(t, e.fields["name"][0].values != nil, "values should not be nil")
+	assertNow(t, len(e.fields["name"][0].values) == 2, "wrong value length")
 	assert(t, e.fields["name"][0].values[0].value == "ender", "invalid value 0")
 	assert(t, e.fields["name"][0].values[1].value == "me", "invalid value 1")
 }
@@ -54,6 +54,7 @@ func TestParseArrayFieldMinimumValid(t *testing.T) {
 	assertNow(t, e != nil, "e should not be nil")
 	assertNow(t, e.fields["name"] != nil, "fields should not be nil")
 	assertNow(t, e.fields["name"][0].values != nil, "values should not be nil")
+	assertNow(t, len(e.fields["name"][0].values) == 2, "wrong value length")
 	assert(t, e.fields["name"][0].values[0].value == "ender", "invalid value 0")
 	assert(t, e.fields["name"][0].values[1].value == "me", "invalid value 1")
 
@@ -72,11 +73,12 @@ func TestParseArrayFieldMaximumValid(t *testing.T) {
 	// valid
 	p, _ := PrototypeString("name : [string:2]")
 	e, errs := p.ValidateString(`name = ["ender", "me"]`)
-
+	fmt.Println(errs)
 	assert(t, errs == nil, "errs should be nil")
 	assertNow(t, e != nil, "e should not be nil")
 	assertNow(t, e.fields["name"] != nil, "fields should not be nil")
 	assertNow(t, e.fields["name"][0].values != nil, "values should not be nil")
+	assertNow(t, len(e.fields["name"][0].values) == 2, "wrong value length")
 	assert(t, e.fields["name"][0].values[0].value == "ender", "invalid value 0")
 	assert(t, e.fields["name"][0].values[1].value == "me", "invalid value 1")
 }
@@ -102,6 +104,7 @@ func TestParseArrayFieldFixedValid(t *testing.T) {
 	assertNow(t, e != nil, "e should not be nil")
 	assertNow(t, e.fields["name"] != nil, "fields should not be nil")
 	assertNow(t, e.fields["name"][0].values != nil, "values should not be nil")
+	assertNow(t, len(e.fields["name"][0].values) == 2, "wrong value length")
 	assert(t, e.fields["name"][0].values[0].value == "ender", "invalid value 0")
 	assert(t, e.fields["name"][0].values[1].value == "me", "invalid value 1")
 }
@@ -128,6 +131,7 @@ func TestParseArrayFieldDisjunctionValid(t *testing.T) {
 	assertNow(t, len(e.fields["name"]) == 1, "field length wrong")
 	assertNow(t, e.fields["name"][0] != nil, "name nil")
 	assertNow(t, e.fields["name"][0].values != nil, "values should not be nil")
+	assertNow(t, len(e.fields["name"][0].values) == 2, "wrong value length")
 	assert(t, e.fields["name"][0].values[0].value == "ender", "invalid value 0")
 	assert(t, e.fields["name"][0].values[1].value == "me", "invalid value 1")
 
@@ -139,6 +143,7 @@ func TestParseArrayFieldDisjunctionValid(t *testing.T) {
 	assertNow(t, len(e.fields["name"]) == 1, "field length wrong")
 	assertNow(t, e.fields["name"][0] != nil, "name nil")
 	assertNow(t, e.fields["name"][0].values != nil, "values should not be nil")
+	assertNow(t, len(e.fields["name"][0].values) == 2, "wrong value length")
 	assert(t, e.fields["name"][0].values[0].value == "6", "invalid value 0")
 	assert(t, e.fields["name"][0].values[1].value == "7", "invalid value 1")
 
@@ -150,6 +155,7 @@ func TestParseArrayFieldDisjunctionValid(t *testing.T) {
 	assertNow(t, len(e.fields["name"]) == 1, "field length wrong")
 	assertNow(t, e.fields["name"][0] != nil, "name nil")
 	assertNow(t, e.fields["name"][0].values != nil, "values should not be nil")
+	assertNow(t, len(e.fields["name"][0].values) == 2, "wrong value length")
 	assert(t, e.fields["name"][0].values[0].value == "ender", "invalid value 0")
 	assert(t, e.fields["name"][0].values[1].value == "6", "invalid value 1")
 }
@@ -177,6 +183,7 @@ func TestParseArrayFieldDisjunctionMinimumValid(t *testing.T) {
 	assertNow(t, len(e.fields["name"]) == 1, "field length wrong")
 	assertNow(t, e.fields["name"][0] != nil, "name nil")
 	assertNow(t, e.fields["name"][0].values != nil, "values should not be nil")
+	assertNow(t, len(e.fields["name"][0].values) == 2, "wrong value length")
 	assert(t, e.fields["name"][0].values[0].value == "ender", "invalid value 0")
 	assert(t, e.fields["name"][0].values[1].value == "me", "invalid value 1")
 
@@ -188,6 +195,7 @@ func TestParseArrayFieldDisjunctionMinimumValid(t *testing.T) {
 	assertNow(t, len(e.fields["name"]) == 1, "field length wrong")
 	assertNow(t, e.fields["name"][0] != nil, "name nil")
 	assertNow(t, e.fields["name"][0].values != nil, "values should not be nil")
+	assertNow(t, len(e.fields["name"][0].values) == 2, "wrong value length")
 	assert(t, e.fields["name"][0].values[0].value == "6", "invalid value 0")
 	assert(t, e.fields["name"][0].values[1].value == "7", "invalid value 1")
 
@@ -234,6 +242,7 @@ func TestParseArrayFieldDisjunctionMaximumValid(t *testing.T) {
 	assertNow(t, len(e.fields["name"]) == 1, "field length wrong")
 	assertNow(t, e.fields["name"][0] != nil, "name nil")
 	assertNow(t, e.fields["name"][0].values != nil, "values should not be nil")
+	assertNow(t, len(e.fields["name"][0].values) == 2, "wrong value length")
 	assert(t, e.fields["name"][0].values[0].value == "ender", "invalid value 0")
 	assert(t, e.fields["name"][0].values[1].value == "me", "invalid value 1")
 
@@ -245,6 +254,7 @@ func TestParseArrayFieldDisjunctionMaximumValid(t *testing.T) {
 	assertNow(t, len(e.fields["name"]) == 1, "field length wrong")
 	assertNow(t, e.fields["name"][0] != nil, "name nil")
 	assertNow(t, e.fields["name"][0].values != nil, "values should not be nil")
+	assertNow(t, len(e.fields["name"][0].values) == 2, "wrong value length")
 	assert(t, e.fields["name"][0].values[0].value == "6", "invalid value 0")
 	assert(t, e.fields["name"][0].values[1].value == "7", "invalid value 1")
 
@@ -256,6 +266,7 @@ func TestParseArrayFieldDisjunctionMaximumValid(t *testing.T) {
 	assertNow(t, len(e.fields["name"]) == 1, "field length wrong")
 	assertNow(t, e.fields["name"][0] != nil, "name nil")
 	assertNow(t, e.fields["name"][0].values != nil, "values should not be nil")
+	assertNow(t, len(e.fields["name"][0].values) == 2, "wrong value length")
 	assert(t, e.fields["name"][0].values[0].value == "ender", "invalid value 0")
 	assert(t, e.fields["name"][0].values[1].value == "6", "invalid value 1")
 }
@@ -295,6 +306,7 @@ func TestParseArrayFieldDisjunctionFixedValid(t *testing.T) {
 	assertNow(t, len(e.fields["name"]) == 1, "field length wrong")
 	assertNow(t, e.fields["name"][0] != nil, "name nil")
 	assertNow(t, e.fields["name"][0].values != nil, "values should not be nil")
+	assertNow(t, len(e.fields["name"][0].values) == 2, "wrong value length")
 	assert(t, e.fields["name"][0].values[0].value == "ender", "invalid value 0")
 	assert(t, e.fields["name"][0].values[1].value == "me", "invalid value 1")
 
@@ -306,6 +318,7 @@ func TestParseArrayFieldDisjunctionFixedValid(t *testing.T) {
 	assertNow(t, len(e.fields["name"]) == 1, "field length wrong")
 	assertNow(t, e.fields["name"][0] != nil, "name nil")
 	assertNow(t, e.fields["name"][0].values != nil, "values should not be nil")
+	assertNow(t, len(e.fields["name"][0].values) == 2, "wrong value length")
 	assert(t, e.fields["name"][0].values[0].value == "6", "invalid value 0")
 	assert(t, e.fields["name"][0].values[1].value == "7", "invalid value 1")
 
@@ -317,6 +330,7 @@ func TestParseArrayFieldDisjunctionFixedValid(t *testing.T) {
 	assertNow(t, len(e.fields["name"]) == 1, "field length wrong")
 	assertNow(t, e.fields["name"][0] != nil, "name nil")
 	assertNow(t, e.fields["name"][0].values != nil, "values should not be nil")
+	assertNow(t, len(e.fields["name"][0].values) == 2, "wrong value length")
 	assert(t, e.fields["name"][0].values[0].value == "ender", "invalid value 0")
 	assert(t, e.fields["name"][0].values[1].value == "6", "invalid value 1")
 }

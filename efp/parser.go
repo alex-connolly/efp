@@ -6,6 +6,8 @@ import (
 	"strconv"
 )
 
+const parentKey = "parent"
+
 type parser struct {
 	constructs []construct
 	prototype  *ProtoElement
@@ -19,7 +21,11 @@ func (p *parser) run() {
 	for _, c := range p.constructs {
 		if c.is(p) {
 			c.process(p)
+			break
 		}
+	}
+	if p.index < len(p.lexer.tokens)-1 {
+		p.run()
 	}
 }
 
@@ -84,15 +90,15 @@ func parseField(p *parser) {
 	key := p.validateKey(f.key.key)
 	p.enforceNext(tknAssign, "Expected '='") // eat =
 	f.values = make([]*Value, 0)
-	p.parseValue(f.values)
+	f.values = p.parseValue(f.values)
 	p.validateField(key, f)
 	p.addField(key, f)
 }
 
-func (p *parser) parseValue(fv []*Value) {
+func (p *parser) parseValue(fv []*Value) []*Value {
 	switch p.current().tkntype {
 	case tknOpenSquare:
-		p.parseArrayDeclaration(fv)
+		fv = p.parseArrayDeclaration(fv)
 		break
 	case tknNumber, tknString, tknValue:
 		v := new(Value)
@@ -100,9 +106,10 @@ func (p *parser) parseValue(fv []*Value) {
 		fv = append(fv, v)
 		break
 	}
+	return fv
 }
 
-func (p *parser) parseArrayDeclaration(fv []*Value) {
+func (p *parser) parseArrayDeclaration(fv []*Value) []*Value {
 	current := new(Value)
 	p.next() // eat [
 	for p.current().tkntype != tknCloseSquare {
@@ -111,7 +118,7 @@ func (p *parser) parseArrayDeclaration(fv []*Value) {
 			p.addValueChild(current, p.lexer.tokenString(p.next()))
 			break
 		case tknOpenSquare:
-			p.parseArrayDeclaration(current.values)
+			current.values = p.parseArrayDeclaration(current.values)
 		case tknComma:
 			p.next()
 			break
@@ -123,6 +130,7 @@ func (p *parser) parseArrayDeclaration(fv []*Value) {
 	}
 	fv = append(fv, current)
 	p.next() // eat ]
+	return fv
 }
 
 func (p *parser) addTypeChild(t *TypeDeclaration, regex string) {
@@ -147,17 +155,21 @@ func (p *parser) addValueChild(fv *Value, regex string) {
 	fv.values = append(fv.values, val)
 }
 
-func (p *parser) evaluateAlias(alias string) *regexp.Regexp {
-	ta := new(TextAlias)
+func (p *parser) findTextAlias(alias string) *TextAlias {
 	current := p.prototype
 	for current != nil {
 		for t, x := range current.textAliases {
 			if t == alias {
-				ta = &x
+				return &x
 			}
 		}
 		current = current.parent
 	}
+	return nil
+}
+
+func (p *parser) evaluateAlias(alias string) *regexp.Regexp {
+	ta := p.findTextAlias(alias)
 	if ta == nil {
 		p.addError(errAliasNotVisible)
 		return nil
@@ -173,17 +185,17 @@ func (p *parser) evaluateAlias(alias string) *regexp.Regexp {
 	return r
 }
 
-func (p *parser) parseTypeDeclaration(t []*TypeDeclaration) {
+func (p *parser) parseTypeDeclaration(t []*TypeDeclaration) []*TypeDeclaration {
 	switch p.current().tkntype {
 	case tknOpenSquare:
-		p.parsePrototypeArrayDeclaration(t)
+		t = p.parsePrototypeArrayDeclaration(t)
 		break
 	case tknString:
 		td := new(TypeDeclaration)
 		r, err := regexp.Compile(p.lexer.tokenString(p.next()))
 		if err != nil {
 			p.addError(errInvalidRegex)
-			return
+			return t
 		}
 		td.value = r
 		t = append(t, td)
@@ -192,17 +204,19 @@ func (p *parser) parseTypeDeclaration(t []*TypeDeclaration) {
 		alias := p.lexer.tokenString(p.next())
 		td := new(TypeDeclaration)
 		td.value = p.evaluateAlias(alias)
+		t = append(t, td)
 	}
 	if p.index >= len(p.lexer.tokens) {
-		return
+		return t
 	}
 	if p.current().tkntype == tknOr {
 		p.next()
 		p.parseTypeDeclaration(t)
 	}
+	return t
 }
 
-func (p *parser) parsePrototypeArrayDeclaration(t []*TypeDeclaration) {
+func (p *parser) parsePrototypeArrayDeclaration(t []*TypeDeclaration) []*TypeDeclaration {
 	p.enforceNext(tknOpenSquare, "Expected '['") // eat [
 	current := new(TypeDeclaration)
 	t = append(t, current)
@@ -220,6 +234,7 @@ func (p *parser) parsePrototypeArrayDeclaration(t []*TypeDeclaration) {
 		current.max = num
 	}
 	p.enforceNext(tknCloseSquare, "Expected ']'") // eat ]
+	return t
 }
 
 func parseElement(p *parser) {
@@ -240,7 +255,7 @@ func parseFieldAlias(p *parser) {
 	p.parseKey(f.key)
 	p.enforceNext(tknColon, "Expected ':'") // eat ":"
 	f.types = make([]*TypeDeclaration, 0)
-	p.parseTypeDeclaration(f.types)
+	f.types = p.parseTypeDeclaration(f.types)
 	p.addFieldAlias(alias, f)
 }
 
@@ -252,14 +267,14 @@ func parseElementAlias(p *parser) {
 	e.key = new(Key)
 	p.parseKey(e.key)
 	e.parameters = make([]*TypeDeclaration, 0)
-	p.parsePrototypeParameters(e.parameters)
+	e.parameters = p.parsePrototypeParameters(e.parameters)
 	p.enforceNext(tknOpenBrace, "Expected '{'") // eat "{"
 	p.addElementAlias(alias, e)
 }
 
 func (p *parser) getPrototypeKey() string {
 	if p.prototype.key == nil {
-		return "global"
+		return parentKey
 	}
 	return p.prototype.key.key
 }
@@ -338,13 +353,23 @@ func (p *parser) parseKey(k *Key) {
 			break
 		case tknValue:
 			k.key = p.lexer.tokenString(p.next())
+			switch p.current().tkntype {
+			case tknColon:
+				p.parseKeyMaximum(k)
+				break
+			}
 			break
 		case tknString:
 			k.key = p.lexer.tokenString(p.next())
 			p.parseKeyRegex(k)
+			switch p.current().tkntype {
+			case tknColon:
+				p.parseKeyMaximum(k)
+				break
+			}
 			break
 		}
-		p.enforceNext(tknCloseCorner, "Open corner in field key must be closed") // eat >
+		p.enforceNext(tknCloseCorner, "Open corner in field key must be closed.") // eat >
 		break
 	}
 }
@@ -358,7 +383,7 @@ func parsePrototypeField(p *parser) {
 	}
 	p.enforceNext(tknColon, "Expected ':'") // eat :
 	f.types = make([]*TypeDeclaration, 0)
-	p.parseTypeDeclaration(f.types)
+	f.types = p.parseTypeDeclaration(f.types)
 	p.addPrototypeField(f)
 }
 
@@ -370,15 +395,14 @@ func parsePrototypeElement(p *parser) {
 		e.key.max = 1
 	}
 	e.parameters = make([]*TypeDeclaration, 0)
-	p.parsePrototypeParameters(e.parameters)
+	e.parameters = p.parsePrototypeParameters(e.parameters)
 	p.enforceNext(tknOpenBrace, "Expected '{'") // eat {
 	p.addPrototypeElement(e)
 }
 
-func (p *parser) parsePrototypeParameters(t []*TypeDeclaration) {
-	// must use current to stop accidentally double-eating the open brace
+func (p *parser) parsePrototypeParameters(t []*TypeDeclaration) []*TypeDeclaration {
 	if p.current().tkntype != tknOpenBracket {
-		return
+		return t
 	}
 	p.enforceNext(tknOpenBracket, "Parameters must open with '('") // eat "("
 	for p.current().tkntype != tknCloseBracket {
@@ -387,11 +411,12 @@ func (p *parser) parsePrototypeParameters(t []*TypeDeclaration) {
 			p.next()
 			break
 		case tknValue, tknString:
-			p.parseTypeDeclaration(t)
+			t = p.parseTypeDeclaration(t)
 			break
 		}
 	}
 	p.enforceNext(tknCloseBracket, "Parameters must close with ')'") // eat ")"
+	return t
 }
 
 func (p *parser) addPrototypeElement(e *ProtoElement) {
@@ -484,7 +509,7 @@ func parsePrototypeFieldAlias(p *parser) {
 	p.parseKey(f.key)
 	p.enforceNext(tknAssign, "Expected ':'") // eat =
 	f.types = make([]*TypeDeclaration, 0)
-	p.parseTypeDeclaration(f.types)
+	f.types = p.parseTypeDeclaration(f.types)
 	p.addFieldAlias(alias, f)
 }
 
@@ -530,6 +555,7 @@ func (p *parser) importPrototypeConstructs() {
 		construct{"prototype field", isPrototypeField, parsePrototypeField},
 		construct{"prototype element", isPrototypeElement, parsePrototypeElement},
 		construct{"element closure", isElementClosure, parseElementClosure},
+		construct{"discovered alias", isDiscoveredAlias, parseDiscoveredAlias},
 	}
 }
 
@@ -541,12 +567,13 @@ func (p *parser) validateType(validType *TypeDeclaration, fv *Value) bool {
 	if validType.isArray {
 		if fv.values == nil {
 			return false
-		} else {
-			if validType.max < len(fv.values) {
-				return false // p.addError(fmt.Sprintf(errArrayMaximum, key, p.scope.key.key, prototype.key.min, len(fv.values)))
-			} else if validType.min > len(fv.values) {
-				return false //	p.addError(fmt.Sprintf(errArrayMinimum, key, p.scope.key.key, prototype.key.min, len(fv.values)))
-			}
+		}
+		if validType.max < len(fv.values) {
+			return false // p.addError(fmt.Sprintf(errArrayMaximum, key, p.scope.key.key, prototype.key.min, len(fv.values)))
+		} else if validType.min > len(fv.values) {
+			return false //	p.addError(fmt.Sprintf(errArrayMinimum, key, p.scope.key.key, prototype.key.min, len(fv.values)))
+		}
+		if validType.types != nil && len(validType.types) != 0 {
 			for _, v := range fv.values {
 				matched := false
 				for _, t := range validType.types {
@@ -560,23 +587,34 @@ func (p *parser) validateType(validType *TypeDeclaration, fv *Value) bool {
 					return false
 				}
 			}
-
-		}
-	} else {
-		if fv.values != nil {
-			return false
-		}
-		matched := false
-		for _, t := range validType.types {
-			if p.validateType(t, fv) {
-				matched = true
-				break
+		} else {
+			if validType.value == nil {
+				return false
+			}
+			if !validType.value.MatchString(fv.value) {
+				return false
 			}
 		}
-		if !matched {
-			//p.addError(fmt.Sprintf(errUnmatchedValue, v))
-			return false
+
+	} else {
+		if validType.types != nil {
+			matched := false
+			for _, t := range validType.types {
+				if p.validateType(t, fv) {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				//p.addError(fmt.Sprintf(errUnmatchedValue, v))
+				return false
+			}
+		} else {
+			if !validType.value.MatchString(fv.value) {
+				return false
+			}
 		}
+
 	}
 	return true
 }
@@ -593,12 +631,11 @@ func (p *parser) validateField(key string, f *Field) bool {
 			}
 		}
 		if !matched {
-			p.addError(errUnmatchedFieldValue)
+			p.addError(fmt.Sprintf(errUnmatchedFieldValue, key))
 			return false // only call out the first one
 			// TODO: more specific errors if possible
 		}
 	}
-
 	return true
 }
 

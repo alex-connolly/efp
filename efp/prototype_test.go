@@ -16,22 +16,20 @@ func TestPrototypeFieldAlias(t *testing.T) {
 
 func TestPrototypeElementAlias(t *testing.T) {
 	// test only element alias
-	p := createPrototypeParserString(`alias x = key {}`)
-	assert(t, isElementAlias(p), "not element alias")
-	parseElementAlias(p)
-	assertNow(t, p.prototype.elementAliases["x"] != nil, "x is nil")
-	assertNow(t, p.prototype.elementAliases["x"].key.key == "key",
-		fmt.Sprintf("key should be 'key', not %s", p.prototype.elementAliases["x"].key.key))
+	p, _ := PrototypeString(`alias x = key {}`)
+	assertNow(t, p.elementAliases["x"] != nil, "x is nil")
+	assertNow(t, p.elementAliases["x"].key.key == "key",
+		fmt.Sprintf("key should be 'key', not %s", p.elementAliases["x"].key.key))
 }
 
 func TestPrototypeRecursiveElementAlias(t *testing.T) {
-	// test only element alias
+	/* test only element alias
 	p := createPrototypeParserString(`alias x = key {}`)
 	assert(t, isElementAlias(p), "not element alias")
 	parseElementAlias(p)
 	assertNow(t, p.prototype.elementAliases["x"] != nil, "x is nil")
 	assertNow(t, p.prototype.elementAliases["x"].key.key == "key",
-		fmt.Sprintf("key should be 'key', not %s", p.prototype.elementAliases["x"].key.key))
+		fmt.Sprintf("key should be 'key', not %s", p.prototype.elementAliases["x"].key.key))*/
 }
 
 func TestPrototypeFieldBasic(t *testing.T) {
@@ -109,32 +107,32 @@ func TestPrototypeFieldArrayFixed(t *testing.T) {
 }
 
 func TestPrototypeFieldRegex(t *testing.T) {
-	p := createPrototypeParserString(`"[a-z]+" : string`)
-	assert(t, isPrototypeField(p), "not prototype field")
-	parsePrototypeField(p)
-	assertNow(t, p.prototype.fields != nil, "r shouldn't be nil")
-	assertNow(t, len(p.prototype.fields["[a-z]+"].types) == 1, "r wrong length")
+	p, errs := PrototypeString(`"[a-z]+" : string`)
+	assert(t, errs == nil, "errs should be nil")
+	assertNow(t, p.fields != nil, "r shouldn't be nil")
+	assertNow(t, len(p.fields["[a-z]+"].types) == 1, "r wrong length")
 }
 
 func TestPrototypeFieldRegexEmptyBounds(t *testing.T) {
-	p := createPrototypeParserString(`<"[a-z]+"> : string`)
-	assert(t, isPrototypeField(p), "not prototype field")
-	parsePrototypeField(p)
-	assertNow(t, p.prototype.fields != nil, "r shouldn't be nil")
-	assertNow(t, len(p.prototype.fields) != 1, "wrong field length")
-	assertNow(t, len(p.prototype.fields["[a-z]+"].types) == 1, "r wrong length")
+	p, errs := PrototypeString(`<"[a-z]+"> : string`)
+	assert(t, errs == nil, "errs should be nil")
+	assertNow(t, p.fields != nil, "r shouldn't be nil")
+	assertNow(t, len(p.fields) == 1, "wrong field length")
+	assertNow(t, len(p.fields["[a-z]+"].types) == 1, "r wrong length")
 }
 
 func TestPrototypeFieldRegexMinimumBounds(t *testing.T) {
-	p, _ := PrototypeString(`<2:"[a-z]+"> : string`)
+	p, errs := PrototypeString(`<2:"[a-z]+"> : string`)
+	assert(t, errs == nil, "errs should be nil")
 	assertNow(t, p.fields != nil, "r shouldn't be nil")
-	assertNow(t, len(p.fields) != 1, "wrong field length")
+	assertNow(t, len(p.fields) == 1, "wrong field length")
 	assertNow(t, len(p.fields["[a-z]+"].types) == 1, "r wrong length")
 }
 
 func TestPrototypeFieldRegexMaximumBounds(t *testing.T) {
-	p, _ := PrototypeString(`<"[a-z]+":2> : string`)
+	p, errs := PrototypeString(`<"[a-z]+":2> : string`)
+	assert(t, errs == nil, "errs should be nil")
 	assertNow(t, p.fields != nil, "r shouldn't be nil")
-	assertNow(t, len(p.fields) != 1, "wrong field length")
+	assertNow(t, len(p.fields) == 1, "wrong field length")
 	assertNow(t, len(p.fields["[a-z]+"].types) == 1, fmt.Sprintf("r wrong length (%d)", len(p.fields["[a-z]+"].types)))
 }

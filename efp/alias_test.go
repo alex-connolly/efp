@@ -59,33 +59,48 @@ func TestAliasingStandardBool(t *testing.T) {
 }
 
 func TestAliasingFieldAlias(t *testing.T) {
-	p := createPrototypeParserString(`
+	p, errs := PrototypeString(`
         alias x = name : string
         x`)
-	parseFieldAlias(p)
-	parseDiscoveredAlias(p)
-	assertNow(t, p.errs == nil, "errs are not nil")
-	assertNow(t, p.prototype.fields["name"] != nil, "name is nil")
+	assertNow(t, errs == nil, "errs are not nil")
+	assertNow(t, p.fields["name"] != nil, "name is nil")
 }
 
 func TestAliasingElementAlias(t *testing.T) {
-	p := createPrototypeParserString(`
+	p, errs := PrototypeString(`
         alias x = name {
 
 		}
         x`)
-	parseElementAlias(p)
-	parseDiscoveredAlias(p)
-	assertNow(t, p.errs == nil, "errs are not nil")
-	assertNow(t, p.prototype.fields != nil, "fields is nil")
-	assertNow(t, p.prototype.fields["name"] != nil, "name is nil")
+	assertNow(t, errs == nil, "errs are not nil")
+	assertNow(t, p.elements != nil, "elements is nil")
+	assertNow(t, p.elements["name"] != nil, "name is nil")
 }
 
-func TestAliasingTextAlias(t *testing.T) {
-	p := createPrototypeParserString(`
+func TestAliasingTextAliasMax(t *testing.T) {
+	const limit = 2
+	const regex = "[a-z]{3}"
+	p, errs := PrototypeString(`
+        alias LIMIT = 2
+		<LIMIT:"[a-z]{3}":LIMIT> : [LIMIT:string:LIMIT]
+		`)
+	assertNow(t, errs == nil, "errs should be nil")
+	assertNow(t, p.fields[regex] != nil, "field is nil")
+	assertNow(t, p.fields[regex].types[0].isArray, "not array")
+	assertNow(t, p.fields[regex].types[0].types[0].value.String() == standards["string"].value, "incorrect regex")
+	assertNow(t, p.fields[regex].types[0].max == limit, "incorrect value max")
+	assertNow(t, p.fields[regex].types[0].min == limit, "incorrect value min")
+	assertNow(t, p.fields[regex].key.min == limit, "incorrect key min")
+	assertNow(t, p.fields[regex].key.max == limit, "incorrect key max")
+}
+
+func TestAliasingTextAliasValue(t *testing.T) {
+	p, errs := PrototypeString(`
         alias x = string
         name : x`)
-	assertNow(t, p.prototype.fields["name"] != nil, "name is nil")
+	assertNow(t, errs == nil, "errs should be nil")
+	assertNow(t, p.fields["name"] != nil, "name is nil")
+	assertNow(t, p.fields["name"].types[0].value.String() == standards["string"].value, "wrong value")
 }
 
 func TestAliasingDoubleIndirection(t *testing.T) {
@@ -94,20 +109,23 @@ func TestAliasingDoubleIndirection(t *testing.T) {
         alias x = name : y
         x`)
 	assertNow(t, p.prototype.fields["name"] != nil, "name is nil")
+	assertNow(t, p.prototype.fields["name"].types[0].value.String() == standards["string"].value, "wrong value")
 }
 
 // test that element recursion is allowed
 func TestAliasingRecursionValid(t *testing.T) {
-	p := createPrototypeParserString(`
+	p, errs := PrototypeString(`
         alias p = x {
             p
         }
         p`)
-	assertNow(t, p.prototype.elements["x"] != nil, "x is nil")
+	assertNow(t, errs == nil, "errs should be nil")
+	assertNow(t, p.elements["x"] != nil, "x is nil")
 }
 
 // test that field recursion is disallowed
 func TestAliasingRecursionInvalid(t *testing.T) {
-	p := createPrototypeParserString(`alias x = x`)
-	assertNow(t, p.errs != nil, "errs should not be nil")
+	_, errs := PrototypeString(`alias x = x
+		x`)
+	assertNow(t, errs != nil, "errs should not be nil")
 }
