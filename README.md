@@ -80,11 +80,12 @@ There are several default types in the ```efp``` spec:
 
 | Alias     | Regex         |
 | :-------------: |:-------------:|
-| id | [a-zA-Z_]+ |
-| string | "\"[^()]\"" |
-| float | [0-9]*.[0-9]+    |
-| bool | true|false    |
-| int | [0-9]+    |
+| string | "^(.*)$" |
+| float | ^(([-]?[1-9][0-9]*)|([-]?[0-9]+.[0-9]+)|0)$   |
+| bool | ^true|false$  |
+| int | ^([-]?[1-9]\d*|0)$   |
+| uint |  ^([1-9]\d*|0)$ |
+
 
 ## Regex
 
@@ -168,6 +169,15 @@ alias 2Dbool = [[bool]]
 
 complex = [string|some_strings|3ints|[weird_regex]|2Dbool]
 ```
+
+Text aliases may be used in two places: as 'value aliases' (as above), or as limit aliases:
+
+```go
+alias LIMIT = 2
+array = [LIMIT:string|int|bool:LIMIT]
+```
+
+In the future, I may make aliases a generic tool for text replacement (i.e. arbitrary sequences), but I'm not really sure how it would improve the validator and the error validation would be a pain. Depending on time, I may also implement macros, but that may be overkill so I'll wait for feedback.
 
 ### Recursion
 

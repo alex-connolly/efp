@@ -72,7 +72,8 @@ func TestAliasingElementAlias(t *testing.T) {
 
 		}
         x`)
-	assertNow(t, errs == nil, "errs are not nil")
+	assert(t, errs == nil, "errs are not nil")
+	assert(t, p.elementAliases["x"] != nil, "alias not found")
 	assertNow(t, p.elements != nil, "elements is nil")
 	assertNow(t, p.elements["name"] != nil, "name is nil")
 }

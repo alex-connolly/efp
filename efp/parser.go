@@ -18,13 +18,15 @@ type parser struct {
 }
 
 func (p *parser) run() {
+	//fmt.Printf("tokens: %d, %d\n", len(p.lexer.tokens), p.lexer.tokens[5].tkntype)
 	for _, c := range p.constructs {
 		if c.is(p) {
+			//fmt.Printf("FOUND: %s\n", c.name)
 			c.process(p)
 			break
 		}
 	}
-	if p.index < len(p.lexer.tokens)-1 {
+	if p.index < len(p.lexer.tokens) {
 		p.run()
 	}
 }
@@ -54,16 +56,13 @@ func (p *parser) validateKey(key string) string {
 			}
 		}
 	}
-	if p.prototype.key == nil {
-		p.addError(fmt.Sprintf("Key %s not matched in global scope", key))
-	} else {
-		p.addError(fmt.Sprintf("Key %s not matched in prototype element %s", key, p.prototype.key.key))
-	}
+	p.addError(fmt.Sprintf("Key %s not matched in prototype element %s", key, p.prototype.key.key))
 	return ""
 }
 
 func parseDiscoveredAlias(p *parser) {
 	alias := p.lexer.tokenString(p.next())
+	// fmt.Printf("alias: %s [%d]\n", alias, len(alias))
 	// go up to find element and add it to the scope
 	e := p.prototype
 	found := false
@@ -71,10 +70,12 @@ func parseDiscoveredAlias(p *parser) {
 		if e.fieldAliases != nil && e.fieldAliases[alias] != nil {
 			p.addPrototypeField(e.fieldAliases[alias])
 			found = true
+			break
 		}
 		if e.elementAliases != nil && e.elementAliases[alias] != nil {
 			p.addPrototypeElement(e.elementAliases[alias])
 			found = true
+			break
 		}
 		e = e.parent
 	}
@@ -115,9 +116,11 @@ func (p *parser) parseArrayDeclaration(fv []*Value) []*Value {
 	for p.current().tkntype != tknCloseSquare {
 		switch p.current().tkntype {
 		case tknString, tknValue, tknNumber:
-			p.addValueChild(current, p.lexer.tokenString(p.next()))
+			value := p.lexer.tokenString(p.next())
+			p.addValueChild(current, value)
 			break
 		case tknOpenSquare:
+			current.values = make([]*Value, 0)
 			current.values = p.parseArrayDeclaration(current.values)
 		case tknComma:
 			p.next()
@@ -210,8 +213,8 @@ func (p *parser) parseTypeDeclaration(t []*TypeDeclaration) []*TypeDeclaration {
 		return t
 	}
 	if p.current().tkntype == tknOr {
-		p.next()
-		p.parseTypeDeclaration(t)
+		p.next() // eat |
+		t = p.parseTypeDeclaration(t)
 	}
 	return t
 }
@@ -227,7 +230,7 @@ func (p *parser) parsePrototypeArrayDeclaration(t []*TypeDeclaration) []*TypeDec
 		p.enforceNext(tknColon, "Array minimum must be followed by ':'") // eat ":"
 	}
 	current.types = make([]*TypeDeclaration, 0)
-	p.parseTypeDeclaration(current.types)
+	current.types = p.parseTypeDeclaration(current.types)
 	if p.current().tkntype == tknColon {
 		p.enforceNext(tknColon, "Array maximum must be preceded by ':'") // eat ":"
 		num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
@@ -270,6 +273,8 @@ func parseElementAlias(p *parser) {
 	e.parameters = p.parsePrototypeParameters(e.parameters)
 	p.enforceNext(tknOpenBrace, "Expected '{'") // eat "{"
 	p.addElementAlias(alias, e)
+	e.parent = p.prototype
+	p.prototype = e
 }
 
 func (p *parser) getPrototypeKey() string {
@@ -304,7 +309,7 @@ func createPrototypeParser(bytes []byte) *parser {
 	p.lexer = lex(bytes)
 	p.prototype = new(ProtoElement)
 	p.prototype.key = new(Key)
-	p.prototype.key.key = "parent"
+	p.prototype.key.key = parentKey
 	p.prototype.addStandardAliases()
 	return p
 }
@@ -398,6 +403,8 @@ func parsePrototypeElement(p *parser) {
 	e.parameters = p.parsePrototypeParameters(e.parameters)
 	p.enforceNext(tknOpenBrace, "Expected '{'") // eat {
 	p.addPrototypeElement(e)
+	e.parent = p.prototype
+	p.prototype = e
 }
 
 func (p *parser) parsePrototypeParameters(t []*TypeDeclaration) []*TypeDeclaration {
@@ -448,10 +455,10 @@ func (p *parser) addElementAlias(alias string, e *ProtoElement) {
 	if p.prototype.elementAliases == nil {
 		p.prototype.elementAliases = make(map[string]*ProtoElement)
 	}
-	if p.prototype.elementAliases[e.alias] != nil {
-		p.addError(fmt.Sprintf(errDuplicateAlias, e.alias, p.prototype.key.key))
+	if p.prototype.elementAliases[alias] != nil {
+		p.addError(fmt.Sprintf(errDuplicateAlias, alias, p.prototype.key.key))
 	} else {
-		p.prototype.elementAliases[e.alias] = e
+		p.prototype.elementAliases[alias] = e
 	}
 }
 
@@ -488,7 +495,9 @@ func (p *parser) validateCompleteElement() {
 func parseElementClosure(p *parser) {
 	p.validateCompleteElement()
 	p.prototype = p.prototype.parent
-	p.scope = p.scope.parent
+	if p.scope != nil {
+		p.scope = p.scope.parent
+	}
 	p.next()
 }
 
@@ -550,8 +559,8 @@ func (p *parser) parseParameters(e *Element) {
 
 func (p *parser) importPrototypeConstructs() {
 	p.constructs = []construct{
-		construct{"prototype field", isFieldAlias, parseFieldAlias},
-		construct{"prototype element", isElementAlias, parseElementAlias},
+		construct{"prototype field alias", isFieldAlias, parseFieldAlias},
+		construct{"prototype element alias", isElementAlias, parseElementAlias},
 		construct{"prototype field", isPrototypeField, parsePrototypeField},
 		construct{"prototype element", isPrototypeElement, parsePrototypeElement},
 		construct{"element closure", isElementClosure, parseElementClosure},
@@ -568,9 +577,9 @@ func (p *parser) validateType(validType *TypeDeclaration, fv *Value) bool {
 		if fv.values == nil {
 			return false
 		}
-		if validType.max < len(fv.values) {
+		if validType.max < len(fv.values) && validType.max != 0 {
 			return false // p.addError(fmt.Sprintf(errArrayMaximum, key, p.scope.key.key, prototype.key.min, len(fv.values)))
-		} else if validType.min > len(fv.values) {
+		} else if validType.min > len(fv.values) && validType.min != 0 {
 			return false //	p.addError(fmt.Sprintf(errArrayMinimum, key, p.scope.key.key, prototype.key.min, len(fv.values)))
 		}
 		if validType.types != nil && len(validType.types) != 0 {

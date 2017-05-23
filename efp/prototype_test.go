@@ -7,11 +7,11 @@ import (
 
 func TestPrototypeFieldAlias(t *testing.T) {
 	// test only field alias
-	p := createPrototypeParserString(`alias x = key : "value"`)
-	assert(t, isFieldAlias(p), "not field alias")
-	parseFieldAlias(p)
-	assertNow(t, p.prototype.fieldAliases["x"] != nil, "")
-	assertNow(t, p.prototype.fieldAliases["x"].key.key == "key", "")
+	p, errs := PrototypeString(`alias x = key : int`)
+	assert(t, errs == nil, "errs should be nil")
+	assertNow(t, p.fieldAliases["x"] != nil, "x is nil")
+	assertNow(t, p.fieldAliases["x"].key.key == "key", "wrong key for x")
+	assertNow(t, p.fieldAliases["x"].types[0].value.String() == standards["int"].value, "wrong type for field")
 }
 
 func TestPrototypeElementAlias(t *testing.T) {
@@ -54,17 +54,18 @@ func TestPrototypeFieldBasicDisjunction(t *testing.T) {
 }
 
 func TestPrototypeFieldComplexDisjunction(t *testing.T) {
-	p := createPrototypeParserString(`name : string|"[a-zA-Z]+"|["[abc]{5}":2]`)
-	assert(t, isPrototypeField(p), "not prototype field")
-	parsePrototypeField(p)
-	assertNow(t, p.prototype.fields["name"] != nil, "failed for name")
-	assertNow(t, p.prototype.fields["name"].types != nil, "failed for nil children")
-	assertNow(t, len(p.prototype.fields["name"].types) == 3, "failed for children length")
-	assert(t, p.prototype.fields["name"].types[1].value.String() == "[a-zA-Z]+", "wrong regex "+p.prototype.fields["name"].types[1].value.String())
+	p, errs := PrototypeString(`name : string|"[a-zA-Z]+"|["[abc]{5}":2]`)
 
-	assertNow(t, p.prototype.fields["name"].types[2].types != nil, "children 2 children == nil")
-	assert(t, p.prototype.fields["name"].types[2].types[0].value.String() == "[abc]{5}", "not abc")
-	assert(t, p.prototype.fields["name"].types[2].isArray, "not array")
+	assertNow(t, errs == nil, "errs must be nil")
+	assertNow(t, p.fields["name"] != nil, "failed for name")
+	assertNow(t, p.fields["name"].types != nil, "failed for nil children")
+
+	assertNow(t, len(p.fields["name"].types) == 3, "failed for children length")
+	assert(t, p.fields["name"].types[1].value.String() == "[a-zA-Z]+", "wrong regex "+p.fields["name"].types[1].value.String())
+
+	assertNow(t, len(p.fields["name"].types[2].types) == 1, "children 2 children length incorrect")
+	assert(t, p.fields["name"].types[2].types[0].value.String() == "[abc]{5}", "not abc")
+	assert(t, p.fields["name"].types[2].isArray, "not array")
 }
 
 func TestPrototypeFieldAliased(t *testing.T) {

@@ -106,7 +106,7 @@ func isElement(p *parser) bool {
 
 // closures are just }
 func isElementClosure(p *parser) bool {
-	return realDistance(p, tknCloseBrace, 1) == 0
+	return p.lexer.tokens[p.index].tkntype == tknCloseBrace
 }
 
 // must be run last to exclude other possibilities
