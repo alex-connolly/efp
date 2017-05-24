@@ -21,7 +21,6 @@ func (p *parser) run() {
 	//fmt.Printf("tokens: %d, %d\n", len(p.lexer.tokens), p.lexer.tokens[5].tkntype)
 	for _, c := range p.constructs {
 		if c.is(p) {
-			//fmt.Printf("FOUND: %s\n", c.name)
 			c.process(p)
 			break
 		}
@@ -159,6 +158,7 @@ func (p *parser) addValueChild(fv *Value, regex string) {
 }
 
 func (p *parser) findTextAlias(alias string) *TextAlias {
+	fmt.Println("here lads")
 	current := p.prototype
 	for current != nil {
 		for t, x := range current.textAliases {
@@ -204,6 +204,7 @@ func (p *parser) parseTypeDeclaration(t []*TypeDeclaration) []*TypeDeclaration {
 		t = append(t, td)
 		break
 	case tknValue:
+		fmt.Println("found alias")
 		alias := p.lexer.tokenString(p.next())
 		td := new(TypeDeclaration)
 		td.value = p.evaluateAlias(alias)
@@ -292,14 +293,18 @@ func (p *parser) parseKeyRegex(k *Key) {
 	k.regex = r
 }
 
-func (p *parser) parseKeyMinimum(k *Key) {
-	k.min, _ = strconv.Atoi(p.lexer.tokenString(p.next()))
-	p.next() // eat :
-}
-
 func (p *parser) parseKeyMaximum(k *Key) {
-	k.max, _ = strconv.Atoi(p.lexer.tokenString(p.next()))
-	p.next() // eat :
+	switch p.current().tkntype {
+	case tknValue:
+		a := p.findTextAlias(p.lexer.tokenString(p.next()))
+		i, err := strconv.Atoi(a.value)
+		if err != nil {
+			p.addError(errInvalidLimitAlias)
+		}
+		k.max = i
+	case tknNumber:
+		k.max, _ = strconv.Atoi(p.lexer.tokenString(p.next()))
+	}
 }
 
 func createPrototypeParser(bytes []byte) *parser {
@@ -316,6 +321,21 @@ func createPrototypeParser(bytes []byte) *parser {
 
 func createPrototypeParserString(data string) *parser {
 	return createPrototypeParser([]byte(data))
+}
+
+func (p *parser) parseKeyMinimum(k *Key) {
+	p.next() // eat :
+	if p.lexer.tokens[p.index+1].tkntype == tknColon {
+		a := p.findTextAlias(p.lexer.tokenString(p.next()))
+		i, err := strconv.Atoi(a.value)
+		if err != nil {
+			p.addError(errInvalidLimitAlias)
+		} else {
+			k.min = i
+		}
+	} else {
+		k.min, _ = strconv.Atoi(p.lexer.tokenString(p.next()))
+	}
 }
 
 func (p *parser) parseKey(k *Key) {
@@ -501,6 +521,30 @@ func parseElementClosure(p *parser) {
 	p.next()
 }
 
+func (p *parser) getTextAliasValue() {
+
+}
+
+func parseTextAlias(p *parser) {
+	p.next() // eat alias
+	alias := p.lexer.tokenString(p.next())
+	p.next() // eat =
+	next := p.next()
+	value := p.lexer.tokenString(next)
+	fmt.Printf("found value: %s\n", value)
+	p.addTextAlias(alias, TextAlias{value, next.tkntype == tknValue})
+}
+
+func (p *parser) addTextAlias(alias string, ta TextAlias) {
+	fmt.Println("here")
+	_, ok := p.prototype.textAliases[alias]
+	if !ok {
+		p.prototype.textAliases[alias] = ta
+	} else {
+		p.addError(errDuplicateAlias)
+	}
+}
+
 func (p *parser) importValidateConstructs() {
 	p.constructs = []construct{
 		construct{"field", isField, parseField},
@@ -561,6 +605,7 @@ func (p *parser) importPrototypeConstructs() {
 	p.constructs = []construct{
 		construct{"prototype field alias", isFieldAlias, parseFieldAlias},
 		construct{"prototype element alias", isElementAlias, parseElementAlias},
+		construct{"text alias", isTextAlias, parseTextAlias},
 		construct{"prototype field", isPrototypeField, parsePrototypeField},
 		construct{"prototype element", isPrototypeElement, parsePrototypeElement},
 		construct{"element closure", isElementClosure, parseElementClosure},
@@ -604,7 +649,6 @@ func (p *parser) validateType(validType *TypeDeclaration, fv *Value) bool {
 				return false
 			}
 		}
-
 	} else {
 		if validType.types != nil {
 			matched := false

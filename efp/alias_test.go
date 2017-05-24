@@ -1,6 +1,7 @@
 package efp
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 )
@@ -85,6 +86,8 @@ func TestAliasingTextAliasMax(t *testing.T) {
         alias LIMIT = 2
 		<LIMIT:"[a-z]{3}":LIMIT> : [LIMIT:string:LIMIT]
 		`)
+	fmt.Println(errs)
+	assert(t, len(p.textAliases) == 1+len(standards), "wrong text alias length")
 	assertNow(t, errs == nil, "errs should be nil")
 	assertNow(t, p.fields[regex] != nil, "field is nil")
 	assertNow(t, p.fields[regex].types[0].isArray, "not array")
@@ -99,18 +102,44 @@ func TestAliasingTextAliasValue(t *testing.T) {
 	p, errs := PrototypeString(`
         alias x = string
         name : x`)
+	fmt.Println(errs)
+	_, ok := p.textAliases["x"]
+	assertNow(t, ok, "alias is nil")
 	assertNow(t, errs == nil, "errs should be nil")
 	assertNow(t, p.fields["name"] != nil, "name is nil")
 	assertNow(t, p.fields["name"].types[0].value.String() == standards["string"].value, "wrong value")
 }
 
 func TestAliasingDoubleIndirection(t *testing.T) {
-	p := createPrototypeParserString(`
+	p, errs := PrototypeString(`
         alias y = string
         alias x = name : y
         x`)
-	assertNow(t, p.prototype.fields["name"] != nil, "name is nil")
-	assertNow(t, p.prototype.fields["name"].types[0].value.String() == standards["string"].value, "wrong value")
+	assert(t, len(p.textAliases) == 1+len(standards), fmt.Sprintf(`wrong text alias length %d (expected %d)`,
+		len(p.textAliases), 1+len(standards)))
+	assert(t, errs == nil, "errs must be nil")
+	assertNow(t, p.fields["name"] != nil, "name is nil")
+	assertNow(t, p.fields["name"].types[0].value.String() == standards["string"].value, "wrong value")
+}
+
+func TestAliasingDuplicateTextAlias(t *testing.T) {
+	_, errs := PrototypeString(`alias y = 25 alias y = 30`)
+	assert(t, errs != nil, "there should be an error")
+}
+
+func TestAliasingDuplicateFieldAlias(t *testing.T) {
+	_, errs := PrototypeString(`alias y = name : string alias y = name : string`)
+	assert(t, errs != nil, "there should be an error")
+}
+
+func TestAliasingDuplicateElementAlias(t *testing.T) {
+	_, errs := PrototypeString(`alias y = name{} alias y = name{}`)
+	assert(t, errs != nil, "there should be an error")
+}
+
+func TestAliasingDuplicateMixedlias(t *testing.T) {
+	_, errs := PrototypeString(`alias y = name{} alias y = 10`)
+	assert(t, errs != nil, "there should be an error")
 }
 
 // test that element recursion is allowed

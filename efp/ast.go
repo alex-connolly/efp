@@ -2,12 +2,14 @@ package efp
 
 import "regexp"
 
+// Field ...
 type Field struct {
 	alias  string
 	key    *Key
 	values []*Value
 }
 
+// Key ...
 type Key struct {
 	key   string
 	regex *regexp.Regexp
@@ -15,11 +17,13 @@ type Key struct {
 	max   int
 }
 
+// Value ...
 type Value struct {
 	value  string
 	values []*Value
 }
 
+// TypeDeclaration ...
 type TypeDeclaration struct {
 	isArray bool
 	types   []*TypeDeclaration
@@ -27,11 +31,14 @@ type TypeDeclaration struct {
 	min     int
 	max     int
 }
+
+// ProtoField ...
 type ProtoField struct {
 	key   *Key
 	types []*TypeDeclaration
 }
 
+// ProtoElement ...
 type ProtoElement struct {
 	alias          string
 	key            *Key
@@ -45,11 +52,13 @@ type ProtoElement struct {
 	textAliases    map[string]TextAlias // leave as token for recursion
 }
 
+// TextAlias ...
 type TextAlias struct {
 	value       string
 	isRecursive bool
 }
 
+// Element ...
 type Element struct {
 	alias      string
 	key        *Key
