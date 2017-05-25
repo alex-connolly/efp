@@ -84,13 +84,13 @@ func TestAliasingTextAliasMax(t *testing.T) {
 	const regex = "[a-z]{3}"
 	p, errs := PrototypeString(`
         alias LIMIT = 2
-		<LIMIT:"[a-z]{3}":LIMIT> : [LIMIT:string:LIMIT]
+			<LIMIT:"[a-z]{3}":LIMIT> : [LIMIT:string:LIMIT]
 		`)
-	fmt.Println(errs)
 	assert(t, len(p.textAliases) == 1+len(standards), "wrong text alias length")
 	assert(t, errs == nil, "errs should be nil")
 	assert(t, p.textAliases["LIMIT"].value == "2", "wrong limit value")
 	assertNow(t, p.fields[regex] != nil, "field is nil")
+	assertNow(t, len(p.fields[regex].types) == 1, "types must not be nil")
 	assertNow(t, p.fields[regex].types[0].isArray, "not array")
 	assertNow(t, p.fields[regex].types[0].types[0].value.String() == standards["string"].value, "incorrect regex")
 	assertNow(t, p.fields[regex].types[0].max == limit, "incorrect value max")

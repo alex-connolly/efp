@@ -68,6 +68,64 @@ type Element struct {
 	fields     map[string][]*Field
 }
 
+// Type ...
+func (f *ProtoField) Type(indices ...int) string {
+	current := f.types
+	for i := 0; i < len(indices)-1; i++ {
+		if current == nil {
+			return ""
+		}
+		current = current[indices[i]].types
+
+	}
+	return current[indices[len(indices)-1]].value.String() // trim in case
+}
+
+// Field ...
+func (f *ProtoElement) Field(name string) *ProtoField {
+	return f.fields[name]
+}
+
+// Types ...
+func (f *ProtoField) Types(indices ...int) []*TypeDeclaration {
+	current := f.types
+	for i := 0; i < len(indices); i++ {
+		current = current[indices[i]].types
+	}
+	return current
+}
+
+// Value ...
+func (f *Field) Value(indices ...int) string {
+	current := f.values
+	for i := 0; i < len(indices)-1; i++ {
+		if current == nil {
+			return ""
+		}
+		current = current[indices[i]].values
+	}
+	return strval(current[indices[len(indices)-1]].value) // trim in case
+}
+
+// Values ...
+func (f *Field) Values(indices ...int) []*Value {
+	current := f.values
+	for i := 0; i < len(indices); i++ {
+		current = current[indices[i]].values
+	}
+	return current
+}
+
+// Element ...
+func (e *Element) Element(name string, index int) *Element {
+	return e.elements[name][index]
+}
+
+// Field ...
+func (e *Element) Field(name string, index int) *Field {
+	return e.fields[name][index]
+}
+
 func (p *ProtoElement) addStandardAliases() {
 	// reassign everything to keep standards as a separate map
 	// better for testing

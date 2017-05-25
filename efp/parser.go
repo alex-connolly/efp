@@ -69,7 +69,7 @@ func (p *parser) validateKey(key string) string {
 
 func parseDiscoveredAlias(p *parser) {
 	alias := p.lexer.tokenString(p.next())
-	// fmt.Printf("alias: %s [%d]\n", alias, len(alias))
+	//fmt.Printf("alias: %s [%d]\n", alias, len(alias))
 	// go up to find element and add it to the scope
 	e := p.prototype
 	found := false
@@ -123,7 +123,7 @@ func (p *parser) parseArrayDeclaration(fv []*Value) []*Value {
 	for p.current().tkntype != tknCloseSquare {
 		switch p.current().tkntype {
 		case tknString, tknValue, tknNumber:
-			value := strval(p.lexer.tokenString(p.next()))
+			value := p.lexer.tokenString(p.next())
 			p.addValueChild(current, value)
 			break
 		case tknOpenSquare:
@@ -156,12 +156,12 @@ func (p *parser) addTypeChild(t *TypeDeclaration, regex string) {
 	t.types = append(t.types, td)
 }
 
-func (p *parser) addValueChild(fv *Value, regex string) {
+func (p *parser) addValueChild(fv *Value, data string) {
 	if fv.values == nil {
 		fv.values = make([]*Value, 0)
 	}
 	val := new(Value)
-	val.value = regex
+	val.value = data
 	fv.values = append(fv.values, val)
 }
 
@@ -215,6 +215,8 @@ func (p *parser) parseTypeDeclaration(t []*TypeDeclaration) []*TypeDeclaration {
 		td := new(TypeDeclaration)
 		td.value = p.evaluateAlias(alias)
 		t = append(t, td)
+	default:
+		//fmt.Printf("wrong token: %d @ %d\n", p.current().tkntype, p.index)
 	}
 	if p.index >= len(p.lexer.tokens) {
 		return t
@@ -229,19 +231,51 @@ func (p *parser) parseTypeDeclaration(t []*TypeDeclaration) []*TypeDeclaration {
 func (p *parser) parsePrototypeArrayDeclaration(t []*TypeDeclaration) []*TypeDeclaration {
 	p.enforceNext(tknOpenSquare, "Expected '['") // eat [
 	current := new(TypeDeclaration)
-	t = append(t, current)
 	current.isArray = true
-	if p.current().tkntype == tknNumber {
-		num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
-		current.min = num
-		p.enforceNext(tknColon, "Array minimum must be followed by ':'") // eat ":"
+	t = append(t, current)
+	// second condition dodges case:
+	// what about [2:string] vs [string:2] (remember [LIMIT:string] and [string:LIMIT])
+	// no method of differentiation!
+	if p.lexer.tokens[p.index+1].tkntype == tknColon && p.lexer.tokens[p.index-1].tkntype == tknOpenSquare {
+		switch p.current().tkntype {
+		case tknNumber:
+			num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
+			current.min = num
+			p.enforceNext(tknColon, "Array minimum must be followed by ':'") // eat ":"
+		case tknValue:
+			a := p.findTextAlias(p.lexer.tokenString(p.current()))
+			i, err := strconv.Atoi(a.value)
+			if err != nil {
+				// this is a max, not a min, so ignore
+			} else {
+				p.next()
+				current.min = i
+				p.enforceNext(tknColon, "Array minimum must be followed by ':'") // eat ":"
+			}
+		default:
+			// ignore
+			//fmt.Printf("wrong token: %d?\n", p.current().tkntype)
+		}
+
 	}
 	current.types = make([]*TypeDeclaration, 0)
 	current.types = p.parseTypeDeclaration(current.types)
 	if p.current().tkntype == tknColon {
 		p.enforceNext(tknColon, "Array maximum must be preceded by ':'") // eat ":"
-		num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
-		current.max = num
+		switch p.current().tkntype {
+		case tknNumber:
+			num, _ := strconv.Atoi(p.lexer.tokenString(p.next()))
+			current.max = num
+		case tknValue:
+			a := p.findTextAlias(p.lexer.tokenString(p.next()))
+			i, err := strconv.Atoi(a.value)
+			if err != nil {
+				p.addError(errInvalidLimitAlias)
+			} else {
+				current.max = i
+			}
+		}
+
 	}
 	p.enforceNext(tknCloseSquare, "Expected ']'") // eat ]
 	return t
@@ -299,20 +333,6 @@ func (p *parser) parseKeyRegex(k *Key) {
 	k.regex = r
 }
 
-func (p *parser) parseKeyMaximum(k *Key) {
-	switch p.current().tkntype {
-	case tknValue:
-		a := p.findTextAlias(p.lexer.tokenString(p.next()))
-		i, err := strconv.Atoi(a.value)
-		if err != nil {
-			p.addError(errInvalidLimitAlias)
-		}
-		k.max = i
-	case tknNumber:
-		k.max, _ = strconv.Atoi(p.lexer.tokenString(p.next()))
-	}
-}
-
 func createPrototypeParser(bytes []byte) *parser {
 	p := new(parser)
 	p.index = 0
@@ -357,19 +377,39 @@ func createPrototypeParserString(data string) *parser {
 	return createPrototypeParser([]byte(data))
 }
 
-func (p *parser) parseKeyMinimum(k *Key) {
+func (p *parser) parseKeyMaximum(k *Key) {
 	p.next() // eat :
-	if p.lexer.tokens[p.index+1].tkntype == tknColon {
+	switch p.current().tkntype {
+	case tknValue:
 		a := p.findTextAlias(p.lexer.tokenString(p.next()))
+		i, err := strconv.Atoi(a.value)
+		if err != nil {
+			p.addError(errInvalidLimitAlias)
+		}
+		k.max = i
+	case tknNumber:
+		k.max, _ = strconv.Atoi(p.lexer.tokenString(p.next()))
+	}
+}
+
+func (p *parser) parseKeyMinimum(k *Key) {
+	if p.current().tkntype == tknValue {
+		a := p.findTextAlias(p.lexer.tokenString(p.next()))
+		if a == nil {
+			// do someting
+			return
+		}
 		i, err := strconv.Atoi(a.value)
 		if err != nil {
 			p.addError(errInvalidLimitAlias)
 		} else {
 			k.min = i
 		}
+
 	} else {
 		k.min, _ = strconv.Atoi(p.lexer.tokenString(p.next()))
 	}
+	p.next() // eat :
 }
 
 func (p *parser) parseKey(k *Key) {
@@ -404,18 +444,27 @@ func (p *parser) parseKey(k *Key) {
 				case tknColon:
 					p.parseKeyMaximum(k)
 					break
-				case tknCloseCorner:
-					break
 				}
 				break
+			default:
+				//fmt.Printf("wrong token type: %d at index %d\n", p.current().tkntype, p.index)
+				break
 			}
-			break
+
 		case tknValue:
-			k.key = p.lexer.tokenString(p.next())
+			if p.lexer.tokens[p.index+1].tkntype == tknColon {
+				p.parseKeyMinimum(k)
+			}
+			switch p.current().tkntype {
+			case tknString:
+				k.key = strval(p.lexer.tokenString(p.next()))
+				p.parseKeyRegex(k)
+			case tknValue:
+				k.key = p.lexer.tokenString(p.next())
+			}
 			switch p.current().tkntype {
 			case tknColon:
 				p.parseKeyMaximum(k)
-				break
 			}
 			break
 		case tknString:
@@ -555,10 +604,6 @@ func parseElementClosure(p *parser) {
 	p.next()
 }
 
-func (p *parser) getTextAliasValue() {
-
-}
-
 func parseTextAlias(p *parser) {
 	p.next() // eat alias
 	alias := p.lexer.tokenString(p.next())
@@ -650,12 +695,16 @@ func (p *parser) end() {
 
 func (p *parser) validateType(validType *TypeDeclaration, fv *Value) bool {
 	if validType.isArray {
+		//fmt.Println("array")
 		if fv.values == nil {
 			return false
 		}
+		//fmt.Printf("fv: %d\n", len(fv.values))
 		if validType.max < len(fv.values) && validType.max != 0 {
+			//fmt.Println("max")
 			return false // p.addError(fmt.Sprintf(errArrayMaximum, key, p.scope.key.key, prototype.key.min, len(fv.values)))
 		} else if validType.min > len(fv.values) && validType.min != 0 {
+			//fmt.Println("min")
 			return false //	p.addError(fmt.Sprintf(errArrayMinimum, key, p.scope.key.key, prototype.key.min, len(fv.values)))
 		}
 		if validType.types != nil && len(validType.types) != 0 {
@@ -673,12 +722,13 @@ func (p *parser) validateType(validType *TypeDeclaration, fv *Value) bool {
 				}
 			}
 		} else {
+
+			// should never use below condition?
 			if validType.value == nil {
 				return false
 			}
-			if !validType.value.MatchString(fv.value) {
-				return false
-			}
+
+			return validType.value.MatchString(fv.value)
 		}
 	} else {
 		if validType.types != nil {
@@ -694,9 +744,6 @@ func (p *parser) validateType(validType *TypeDeclaration, fv *Value) bool {
 				return false
 			}
 		} else {
-			if validType.value.MatchString(fv.value) {
-				fmt.Println("here bois")
-			}
 			return validType.value.MatchString(fv.value)
 		}
 	}
