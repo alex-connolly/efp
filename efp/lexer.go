@@ -119,14 +119,12 @@ func processIdentifier(l *lexer) token {
 }
 
 // processes a string sequence to create a new token.
-// TODO: really hacky, definitely a better way when I have time
 func processString(l *lexer) token {
 	// the start - end is the value
-	// it does NOT include the enclosing quotation marks
+	// it DOES include the enclosing quotation marks
 	t := new(token)
 	t.start = l.offset
 	t.end = l.offset
-	t.start++
 	t.tkntype = tknString
 	b := l.nextByte()
 	b2 := l.nextByte()
@@ -134,10 +132,10 @@ func processString(l *lexer) token {
 		t.end++
 		b2 = l.nextByte()
 		if l.isEOF() {
-			t.end++
+			t.end += 2
 			return *t
 		}
 	}
-	t.end++
+	t.end += 2
 	return *t
 }

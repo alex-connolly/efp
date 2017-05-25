@@ -28,6 +28,8 @@ func TestIsPrototypeField(t *testing.T) {
 	assert(t, isPrototypeField(p), "fixed disjunction field failed")
 	p = createPrototypeParserString(`"[a-z]+" : string`)
 	assert(t, isPrototypeField(p), "regex key failed")
+	p = createPrototypeParserString(`<LIMIT:"[a-z]{3}":LIMIT> : [LIMIT:string:LIMIT]`)
+	assert(t, isPrototypeField(p), "highly aliased failed")
 }
 
 func TestIsPrototypeElement(t *testing.T) {

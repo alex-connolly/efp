@@ -1,6 +1,7 @@
 package efp
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -48,7 +49,7 @@ func TestLexerValueLength(t *testing.T) {
 	assert(t, len(l.tokens) == 4, "wrong token number")
 	expected := []int{5, 4, 2, 3}
 	for i, tk := range l.tokens {
-		assert(t, tk.end-tk.start == expected[i], "wrong token string")
+		assert(t, tk.end-tk.start == expected[i], fmt.Sprintf("wrong %d-th token length: %d\n", i, tk.end-tk.start))
 	}
 }
 
@@ -56,7 +57,7 @@ func TestLexerTokenString(t *testing.T) {
 	l := lexString("hello this is dog")
 	expected := []string{"hello", "this", "is", "dog"}
 	for i, tk := range l.tokens {
-		assert(t, l.tokenString(tk) == expected[i], "Wrong token")
+		assert(t, l.tokenString(tk) == expected[i], fmt.Sprintf("Wrong token string: %s\n", l.tokenString(tk)))
 	}
 }
 
@@ -68,7 +69,13 @@ func TestLexerTokenLengths(t *testing.T) {
 }
 
 func TestLexerStrings(t *testing.T) {
-	l := lexString(`"name" = "ender"`)
-	assert(t, l.tokenString(l.tokens[0]) == "name", "wrong string")
-	assert(t, l.tokenString(l.tokens[2]) == "ender", "wrong string "+l.tokenString(l.tokens[2]))
+	l := lexString(`name = "ender"`)
+	assert(t, l.tokenString(l.tokens[0]) == "name", "wrong string "+l.tokenString(l.tokens[0]))
+	assert(t, l.tokenString(l.tokens[2]) == `"ender"`, "wrong string "+l.tokenString(l.tokens[2]))
+
+	// now test when not EOF (special case)
+	l = lexString(`name = "ender"	`)
+	assert(t, l.tokenString(l.tokens[0]) == "name", "wrong string "+l.tokenString(l.tokens[0]))
+	assert(t, l.tokenString(l.tokens[2]) == `"ender"`, "wrong string "+l.tokenString(l.tokens[2]))
+
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 const parentKey = "parent"
@@ -24,13 +25,14 @@ func (p *parser) run() {
 	found := false
 	for _, c := range p.constructs {
 		if c.is(p) {
+			//fmt.Printf("FOUND: %s at index %d\n", c.name, p.index)
 			c.process(p)
 			found = true
 			break
 		}
 	}
 	if !found {
-		p.addError(errUnrecognisedConstruct)
+		p.addError(fmt.Sprintf(errUnrecognisedConstruct, p.lexer.tokenString(p.current())))
 		p.next()
 	}
 	p.run()
@@ -92,7 +94,7 @@ func parseDiscoveredAlias(p *parser) {
 func parseField(p *parser) {
 	f := new(Field)
 	f.key = new(Key)
-	f.key.key = p.lexer.tokenString(p.next())
+	f.key.key = strval(p.lexer.tokenString(p.next()))
 	key := p.validateKey(f.key.key)
 	p.enforceNext(tknAssign, "Expected '='") // eat =
 	f.values = make([]*Value, 0)
@@ -121,7 +123,7 @@ func (p *parser) parseArrayDeclaration(fv []*Value) []*Value {
 	for p.current().tkntype != tknCloseSquare {
 		switch p.current().tkntype {
 		case tknString, tknValue, tknNumber:
-			value := p.lexer.tokenString(p.next())
+			value := strval(p.lexer.tokenString(p.next()))
 			p.addValueChild(current, value)
 			break
 		case tknOpenSquare:
@@ -200,7 +202,7 @@ func (p *parser) parseTypeDeclaration(t []*TypeDeclaration) []*TypeDeclaration {
 		break
 	case tknString:
 		td := new(TypeDeclaration)
-		r, err := regexp.Compile(p.lexer.tokenString(p.next()))
+		r, err := regexp.Compile(strval(p.lexer.tokenString(p.next())))
 		if err != nil {
 			p.addError(errInvalidRegex)
 			return t
@@ -209,8 +211,7 @@ func (p *parser) parseTypeDeclaration(t []*TypeDeclaration) []*TypeDeclaration {
 		t = append(t, td)
 		break
 	case tknValue:
-
-		alias := p.lexer.tokenString(p.next())
+		alias := strval(p.lexer.tokenString(p.next()))
 		td := new(TypeDeclaration)
 		td.value = p.evaluateAlias(alias)
 		t = append(t, td)
@@ -258,7 +259,7 @@ func parseElement(p *parser) {
 func parseFieldAlias(p *parser) {
 	f := new(ProtoField)
 	p.next() // eat "alias"
-	alias := p.lexer.tokenString(p.next())
+	alias := strval(p.lexer.tokenString(p.next()))
 	p.enforceNext(tknAssign, "Expected '='") // eat "="
 	f.key = new(Key)
 	p.parseKey(f.key)
@@ -271,7 +272,7 @@ func parseFieldAlias(p *parser) {
 func parseElementAlias(p *parser) {
 	e := new(ProtoElement)
 	p.next() // eat "alias"
-	alias := p.lexer.tokenString(p.next())
+	alias := strval(p.lexer.tokenString(p.next()))
 	p.enforceNext(tknAssign, "Expected '='") // eat "="
 	e.key = new(Key)
 	p.parseKey(e.key)
@@ -377,7 +378,7 @@ func (p *parser) parseKey(k *Key) {
 		k.key = p.lexer.tokenString(p.next())
 		break
 	case tknString:
-		k.key = p.lexer.tokenString(p.next())
+		k.key = strval(p.lexer.tokenString(p.next()))
 		p.parseKeyRegex(k)
 		break
 	case tknOpenCorner:
@@ -397,7 +398,7 @@ func (p *parser) parseKey(k *Key) {
 				}
 				break
 			case tknString:
-				k.key = p.lexer.tokenString(p.next())
+				k.key = strval(p.lexer.tokenString(p.next()))
 				p.parseKeyRegex(k)
 				switch p.current().tkntype {
 				case tknColon:
@@ -418,7 +419,7 @@ func (p *parser) parseKey(k *Key) {
 			}
 			break
 		case tknString:
-			k.key = p.lexer.tokenString(p.next())
+			k.key = strval(p.lexer.tokenString(p.next()))
 			p.parseKeyRegex(k)
 			switch p.current().tkntype {
 			case tknColon:
@@ -563,7 +564,7 @@ func parseTextAlias(p *parser) {
 	alias := p.lexer.tokenString(p.next())
 	p.next() // eat =
 	next := p.next()
-	value := p.lexer.tokenString(next)
+	value := strval(p.lexer.tokenString(next))
 	p.addTextAlias(alias, TextAlias{value, next.tkntype == tknValue})
 }
 
@@ -693,13 +694,24 @@ func (p *parser) validateType(validType *TypeDeclaration, fv *Value) bool {
 				return false
 			}
 		} else {
-			if !validType.value.MatchString(fv.value) {
-				return false
+			if validType.value.MatchString(fv.value) {
+				fmt.Println("here bois")
 			}
+			return validType.value.MatchString(fv.value)
 		}
-
 	}
 	return true
+}
+
+func strval(data string) string {
+	cp := make([]byte, len(data))
+	copy(cp, []byte(data))
+	s := string(cp)
+	if strings.HasPrefix(s, "\"") {
+		s = strings.TrimPrefix(s, "\"")
+		s = strings.TrimSuffix(s, "\"")
+	}
+	return s
 }
 
 func (p *parser) validateField(key string, f *Field) bool {

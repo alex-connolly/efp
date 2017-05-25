@@ -28,7 +28,7 @@ const (
 )
 
 var standards = map[string]TextAlias{
-	"string": TextAlias{`^(.*)$`, false},
+	"string": TextAlias{`^\"(.*)\"$`, false},
 	"int":    TextAlias{`^([-]?[1-9]\d*|0)$`, false},
 	"float":  TextAlias{"^(([-]?[1-9][0-9]*)|([-]?[0-9]+.[0-9]+)|0)$", false},
 	"bool":   TextAlias{"^(true|false)$", false},

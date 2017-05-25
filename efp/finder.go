@@ -45,18 +45,20 @@ func realDistance(p *parser, tk tokenType, number int) int {
 			case tknColon:
 				// [2:string] --> ignore
 				// [string:2] --> ignore
+				// <LIMIT:string> --> ignore
+				// <string:LIMIT> --> ignore
+				// [LIMIT:string] --> ignore
+
 				// x : string --> keep
-				if i < len(p.lexer.tokens)-1 && i > 0 {
-					if p.lexer.tokens[i+1].tkntype != tknNumber && p.lexer.tokens[i-1].tkntype != tknNumber {
-						inValue = false
-						if p.lexer.tokens[i].tkntype == tk {
-							found++
-							if found == number {
-								return count
-							}
+				if !p.isPartOfValue(i) {
+					inValue = false
+					if p.lexer.tokens[i].tkntype == tk {
+						found++
+						if found == number {
+							return count
 						}
-						count++
 					}
+					count++
 				}
 			case tknOpenSquare, tknCloseSquare, tknOr:
 				// do nothing
@@ -74,6 +76,31 @@ func realDistance(p *parser, tk tokenType, number int) int {
 		}
 	}
 	return -1
+}
+
+func (p *parser) isPartOfValue(i int) bool {
+	if i < len(p.lexer.tokens)-1 && p.lexer.tokens[i+1].tkntype == tknNumber {
+		return true
+	} else if i > 0 && p.lexer.tokens[i-1].tkntype == tknNumber {
+		return true
+	} else if i < len(p.lexer.tokens)-2 &&
+		p.lexer.tokens[i+2].tkntype == tknCloseCorner &&
+		p.lexer.tokens[i+1].tkntype == tknValue {
+		return true
+	} else if i > 1 &&
+		p.lexer.tokens[i-2].tkntype == tknOpenCorner &&
+		p.lexer.tokens[i-1].tkntype == tknValue {
+		return true
+	} else if i < len(p.lexer.tokens)-2 &&
+		p.lexer.tokens[i+2].tkntype == tknCloseSquare &&
+		p.lexer.tokens[i+1].tkntype == tknValue {
+		return true
+	} else if i > 1 &&
+		p.lexer.tokens[i-2].tkntype == tknOpenSquare &&
+		p.lexer.tokens[i-1].tkntype == tknValue {
+		return true
+	}
+	return false
 }
 
 // field of the form key = value
@@ -135,7 +162,7 @@ func isPrototypeFieldWithOffset(p *parser, offset int, extra int) bool {
 	return (realDistance(p, tknValue, 1+extra) == offset && realDistance(p, tknColon, 1) == 1+offset) ||
 		// "key" : value
 		(realDistance(p, tknString, 1) == offset && realDistance(p, tknColon, 1) == 1+offset) ||
-		// <key> : values || <3:key> : value || <key:3> : value || <3:key:3> : value
+		// <key> : values || <3:key> : value || <key:3> : value || <3:key:3> : value || <MIN:key:MAX> : [MIN:value:MAX]
 		(realDistance(p, tknOpenCorner, 1) == offset && realDistance(p, tknColon, 1) == 3+offset)
 }
 
