@@ -69,16 +69,25 @@ type Element struct {
 }
 
 // Type ...
-func (f *ProtoField) Type(indices ...int) string {
+func (f *ProtoField) Type(indices ...int) *TypeDeclaration {
 	current := f.types
 	for i := 0; i < len(indices)-1; i++ {
 		if current == nil {
-			return ""
+			return nil
 		}
 		current = current[indices[i]].types
 
 	}
-	return current[indices[len(indices)-1]].value.String() // trim in case
+	return current[indices[len(indices)-1]] // trim in case
+}
+
+// TypeValue ...
+func (f *ProtoField) TypeValue(indices ...int) string {
+	t := f.Type(indices...)
+	if t == nil {
+		return ""
+	}
+	return t.value.String()
 }
 
 // Field ...
@@ -126,11 +135,11 @@ func (e *Element) Field(name string, index int) *Field {
 	return e.fields[name][index]
 }
 
-func (p *ProtoElement) addStandardAliases() {
+func (e *ProtoElement) addStandardAliases() {
 	// reassign everything to keep standards as a separate map
 	// better for testing
-	p.textAliases = make(map[string]TextAlias)
+	e.textAliases = make(map[string]TextAlias)
 	for k, v := range standards {
-		p.textAliases[k] = v
+		e.textAliases[k] = v
 	}
 }

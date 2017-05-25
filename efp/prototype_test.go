@@ -11,7 +11,7 @@ func TestPrototypeFieldAlias(t *testing.T) {
 	assert(t, errs == nil, "errs should be nil")
 	assertNow(t, p.fieldAliases["x"] != nil, "x is nil")
 	assertNow(t, p.fieldAliases["x"].key.key == "key", "wrong key for x")
-	assertNow(t, p.fieldAliases["x"].Type(0) == standards["int"].value, "wrong type for field")
+	assertNow(t, p.fieldAliases["x"].TypeValue(0) == standards["int"].value, "wrong type for field")
 }
 
 func TestPrototypeElementAlias(t *testing.T) {
@@ -39,7 +39,7 @@ func TestPrototypeFieldBasic(t *testing.T) {
 	assertNow(t, p.prototype != nil, "prototype is nil")
 	assertNow(t, p.prototype.fields != nil && p.prototype.Field("name") != nil, "fields is nil")
 	assertNow(t, len(p.prototype.Field("name").types) == 1, "wrong type length")
-	assertNow(t, p.prototype.Field("name").Type(0) == standards["string"].value, "wrong type")
+	assertNow(t, p.prototype.Field("name").TypeValue(0) == standards["string"].value, "wrong type")
 }
 
 func TestPrototypeFieldBasicDisjunction(t *testing.T) {
@@ -48,9 +48,9 @@ func TestPrototypeFieldBasicDisjunction(t *testing.T) {
 	parsePrototypeField(p)
 	assertNow(t, p.prototype.fields != nil && p.prototype.Field("name") != nil, "")
 	assertNow(t, len(p.prototype.Field("name").types) == 3, "wrong length")
-	assertNow(t, p.prototype.Field("name").Type(0) == standards["string"].value, "")
-	assertNow(t, p.prototype.Field("name").Type(1) == standards["int"].value, "")
-	assertNow(t, p.prototype.Field("name").Type(2) == standards["float"].value, "")
+	assertNow(t, p.prototype.Field("name").TypeValue(0) == standards["string"].value, "")
+	assertNow(t, p.prototype.Field("name").TypeValue(1) == standards["int"].value, "")
+	assertNow(t, p.prototype.Field("name").TypeValue(2) == standards["float"].value, "")
 }
 
 func TestPrototypeFieldComplexDisjunction(t *testing.T) {
@@ -60,11 +60,11 @@ func TestPrototypeFieldComplexDisjunction(t *testing.T) {
 	assertNow(t, p.Field("name").types != nil, "failed for nil children")
 
 	assertNow(t, len(p.Field("name").types) == 3, "failed for children length")
-	assert(t, p.Field("name").Type(1) == "[a-zA-Z]+", "wrong regex "+p.Field("name").Type(1))
+	assert(t, p.Field("name").TypeValue(1) == "[a-zA-Z]+", "wrong regex "+p.Field("name").TypeValue(1))
 
 	assertNow(t, len(p.Field("name").types[2].types) == 1, "children 2 children length incorrect")
-	assert(t, p.Field("name").Type(2, 0) == "[abc]{5}", "not abc")
-	//assert(t, p.Field("name").Type(0).isArray, "not array")
+	assert(t, p.Field("name").TypeValue(2, 0) == "[abc]{5}", "not abc")
+	//assert(t, p.Field("name").TypeValue(0).isArray, "not array")
 }
 
 func TestPrototypeFieldAliased(t *testing.T) {
@@ -149,4 +149,86 @@ func TestPrototypeFieldRegexMaximumBounds(t *testing.T) {
 	assertNow(t, p.fields["[a-z]+"] != nil, "field key is nil entry")
 	assertNow(t, p.fields["[a-z]+"].types != nil, "types is nil")
 	assertNow(t, len(p.fields["[a-z]+"].types) == 1, fmt.Sprintf("r wrong length (%d)", len(p.fields["[a-z]+"].types)))
+}
+
+func TestTwoDimensionalArraySimple(t *testing.T) {
+	p, errs := PrototypeString("name : [[string]]")
+	assert(t, errs == nil, "errs should be nil")
+	assertNow(t, p.fields != nil, "fields shouldn't be nil")
+	assertNow(t, p.Field("name").Types() != nil, "types shouldn't be nil")                                 // top level array
+	assertNow(t, p.Field("name").Types(0) != nil, "types 0 shouldn't be nil")                              // second level array
+	assertNow(t, p.Field("name").TypeValue(0, 0, 0) == standards["string"].value, "type should be string") //
+}
+
+func TestTwoDimensionalArrayDisjunction(t *testing.T) {
+	p, errs := PrototypeString("name : [[string|int]]")
+	assert(t, errs == nil, "errs should be nil")
+	assertNow(t, p.fields != nil, "fields shouldn't be nil")
+	assertNow(t, p.Field("name").Types() != nil, "types shouldn't be nil")                                 // top level array
+	assertNow(t, p.Field("name").Types(0) != nil, "types 0 shouldn't be nil")                              // second level array
+	assertNow(t, p.Field("name").TypeValue(0, 0, 0) == standards["string"].value, "type should be string") //
+	assertNow(t, p.Field("name").TypeValue(0, 0, 1) == standards["int"].value, "type should be int")
+}
+
+func TestTwoDimensionalArrayArrayDisjunction(t *testing.T) {
+	p, errs := PrototypeString("name : [[string]|[int]]")
+	assert(t, errs == nil, "errs should be nil")
+	assertNow(t, p.fields != nil, "fields shouldn't be nil")
+	assertNow(t, p.Field("name").Types() != nil, "types shouldn't be nil")                                 // top level array
+	assertNow(t, p.Field("name").Types(0) != nil, "types 0 shouldn't be nil")                              // second level array
+	assertNow(t, p.Field("name").TypeValue(0, 0, 0) == standards["string"].value, "type should be string") //
+	assertNow(t, p.Field("name").TypeValue(0, 1, 0) == standards["int"].value, "type should be int")
+}
+
+func TestTwoDimensionalArrayArrayDisjunctionMinimum(t *testing.T) {
+	p, errs := PrototypeString("name : [2:[string]|[int]]")
+	assert(t, errs == nil, "errs should be nil")
+	assertNow(t, p.fields != nil, "fields shouldn't be nil")
+	assertNow(t, p.Field("name").Types() != nil, "types shouldn't be nil")
+	assertNow(t, p.Field("name").Type(0).min == 2, "wrong minimum value")                                  // top level array
+	assertNow(t, p.Field("name").Types(0) != nil, "types 0 shouldn't be nil")                              // second level array
+	assertNow(t, p.Field("name").TypeValue(0, 0, 0) == standards["string"].value, "type should be string") //
+	assertNow(t, p.Field("name").TypeValue(0, 1, 0) == standards["int"].value, "type should be int")
+}
+
+func TestTwoDimensionalArrayArrayDisjunctionMaximum(t *testing.T) {
+	p, errs := PrototypeString("name : [[string]|[int]:2]")
+	assert(t, errs == nil, "errs should be nil")
+	assertNow(t, p.fields != nil, "fields shouldn't be nil")
+	assertNow(t, p.Field("name").Types() != nil, "types shouldn't be nil")
+	assertNow(t, p.Field("name").Type(0).max == 2, "wrong maximum value")                                  // top level array
+	assertNow(t, p.Field("name").Types(0) != nil, "types 0 shouldn't be nil")                              // second level array
+	assertNow(t, p.Field("name").TypeValue(0, 0, 0) == standards["string"].value, "type should be string") //
+	assertNow(t, p.Field("name").TypeValue(0, 1, 0) == standards["int"].value, "type should be int")
+}
+
+func TestTwoDimensionalArrayArrayDisjunctionFixed(t *testing.T) {
+	p, errs := PrototypeString("name : [2:[string]|[int]:2]")
+	assert(t, errs == nil, "errs should be nil")
+	assertNow(t, p.fields != nil, "fields shouldn't be nil")
+	assertNow(t, p.Field("name").Types() != nil, "types shouldn't be nil")
+	assertNow(t, p.Field("name").Type(0).max == 2, "wrong maximum value")
+	assertNow(t, p.Field("name").Type(0).min == 2, "wrong minimum value")                                  // top level array
+	assertNow(t, p.Field("name").Types(0) != nil, "types 0 shouldn't be nil")                              // second level array
+	assertNow(t, p.Field("name").TypeValue(0, 0, 0) == standards["string"].value, "type should be string") //
+	assertNow(t, p.Field("name").TypeValue(0, 1, 0) == standards["int"].value, "type should be int")
+}
+
+func TestTwoDimensionalArrayArrayDisjunctionFixedComplex(t *testing.T) {
+	p, errs := PrototypeString("name : [2:[3:string|float:3]|[4:int:4]:2]")
+	assert(t, errs == nil, "errs should be nil")
+	assertNow(t, p.fields != nil, "fields shouldn't be nil")
+	assertNow(t, p.Field("name").Types() != nil, "types shouldn't be nil")
+	assertNow(t, p.Field("name").Type(0).max == 2, "wrong maximum value")
+	assertNow(t, p.Field("name").Type(0).min == 2, "wrong minimum value") // top level array
+	assertNow(t, p.Field("name").Types(0) != nil, "types 0 shouldn't be nil")
+
+	assert(t, p.Field("name").Type(0, 0).max == 3, "wrong maximum value")
+	assert(t, p.Field("name").Type(0, 0).min == 3, "wrong minimum value")
+	assert(t, p.Field("name").Type(0, 1).max == 4, "wrong maximum value")
+	assert(t, p.Field("name").Type(0, 1).min == 4, "wrong minimum value")
+
+	assertNow(t, p.Field("name").TypeValue(0, 0, 0) == standards["string"].value, "type should be string")
+	assertNow(t, p.Field("name").TypeValue(0, 0, 1) == standards["float"].value, "type should be string")
+	assertNow(t, p.Field("name").TypeValue(0, 1, 0) == standards["int"].value, "type should be int")
 }

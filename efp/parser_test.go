@@ -373,7 +373,8 @@ func TestParseArrayFieldTwoDimensionalDisjunction(t *testing.T) {
 	assert(t, errs == nil, "errs should be nil")
 	e, errs := p.ValidateString(`name = [["ender", "me"], ["me", "ender"]]`)
 	fmt.Println(errs)
-	assert(t, len(e.Field("name", 0).Values(0, 0)) == 2, "wrong array length")
+	assert(t, len(e.Field("name", 0).Values(0)) == 2, "wrong length 0")
+	assert(t, len(e.Field("name", 0).Values(0, 0)) == 2, "wrong length 0 0")
 	assert(t, errs == nil, "errs should be nil")
 	assert(t, e != nil, "e should not be nil")
 }

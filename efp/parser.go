@@ -118,16 +118,21 @@ func (p *parser) parseValue(fv []*Value) []*Value {
 }
 
 func (p *parser) parseArrayDeclaration(fv []*Value) []*Value {
+	fmt.Println("parsing array")
 	current := new(Value)
 	p.next() // eat [
 	for p.current().tkntype != tknCloseSquare {
 		switch p.current().tkntype {
 		case tknString, tknValue, tknNumber:
 			value := p.lexer.tokenString(p.next())
+			fmt.Printf("adding child: %s\n", value)
 			p.addValueChild(current, value)
 			break
 		case tknOpenSquare:
-			current.values = make([]*Value, 0)
+			fmt.Println("new child array")
+			if current.values == nil {
+				current.values = make([]*Value, 0)
+			}
 			current.values = p.parseArrayDeclaration(current.values)
 		case tknComma:
 			p.next()
@@ -140,6 +145,7 @@ func (p *parser) parseArrayDeclaration(fv []*Value) []*Value {
 	}
 	fv = append(fv, current)
 	p.next() // eat ]
+	fmt.Println("ending array")
 	return fv
 }
 
