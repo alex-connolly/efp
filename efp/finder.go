@@ -12,35 +12,34 @@ func realDistance(p *parser, tk tokenType, number int) int {
 	found := 0
 	count := 0
 	inValue := false
-	var prev tokenType
-	prev = tknNone
-	for i, t := range p.lexer.tokens {
+	for i := p.index; i < len(p.lexer.tokens); i++ {
 		if !inValue {
-			if t.tkntype == tk {
+			if p.lexer.tokens[i].tkntype == tk {
 				found++
 				if found == number {
 					return count
 				}
 			}
-			switch t.tkntype {
+			switch p.lexer.tokens[i].tkntype {
 			case tknValue, tknString, tknNumber:
-				//fmt.Printf("in value\n")
 				inValue = true
 			}
 			count++
 		} else {
-			switch t.tkntype {
+			switch p.lexer.tokens[i].tkntype {
 			case tknValue, tknString, tknNumber:
-				switch prev {
-				case tknValue, tknString, tknNumber:
-					if t.tkntype == tk {
-						found++
-						if found == number {
-							return count
+				if i > 0 {
+					switch p.lexer.tokens[i-1].tkntype {
+					case tknValue, tknString, tknNumber:
+						if p.lexer.tokens[i].tkntype == tk {
+							found++
+							if found == number {
+								return count
+							}
 						}
+						count++
+						break
 					}
-					count++
-					break
 				}
 				break
 			case tknColon:
@@ -49,26 +48,22 @@ func realDistance(p *parser, tk tokenType, number int) int {
 				// x : string --> keep
 				if i < len(p.lexer.tokens)-1 && i > 0 {
 					if p.lexer.tokens[i+1].tkntype != tknNumber && p.lexer.tokens[i-1].tkntype != tknNumber {
-						//fmt.Printf("%s --> hi colon xxx %d\n", p.lexer.buffer, i)
 						inValue = false
-						if t.tkntype == tk {
+						if p.lexer.tokens[i].tkntype == tk {
 							found++
 							if found == number {
 								return count
 							}
 						}
 						count++
-					} else {
-						//fmt.Printf("value colon\n ")
 					}
 				}
 			case tknOpenSquare, tknCloseSquare, tknOr:
 				// do nothing
 				break
 			default:
-				//fmt.Printf("value ended with: %d\n", t.tkntype)
 				inValue = false
-				if t.tkntype == tk {
+				if p.lexer.tokens[i].tkntype == tk {
 					found++
 					if found == number {
 						return count
@@ -77,7 +72,6 @@ func realDistance(p *parser, tk tokenType, number int) int {
 				count++
 			}
 		}
-		prev = t.tkntype
 	}
 	return -1
 }

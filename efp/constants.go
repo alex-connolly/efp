@@ -5,11 +5,13 @@ package efp
 
 // Errors during prototype generation.
 const (
-	errDuplicateAlias    = "Alias %s already declared in scope %s."
-	errAliasNotVisible   = "Alias %s discovered in element %s not found."
-	errUnclosedArray     = "Array declaration in field %s is incomplete."
-	errInvalidRegex      = "Invalid regex string %s in element %s."
-	errInvalidLimitAlias = "Invalid limit alias."
+	errDuplicateAlias        = "Alias %s already declared in scope %s."
+	errAliasNotVisible       = "Alias %s discovered in element %s not found."
+	errUnclosedArray         = "Array declaration in field %s is incomplete."
+	errInvalidRegex          = "Invalid regex string %s in element %s."
+	errInvalidLimitAlias     = "Invalid limit alias."
+	errUnrecognisedConstruct = "Unrecognised construct %s."
+	errUnrecognisedToken     = "Unrecognised token %s."
 )
 
 // Errors during parsing.

@@ -69,5 +69,10 @@ type Element struct {
 }
 
 func (p *ProtoElement) addStandardAliases() {
-	p.textAliases = standards
+	// reassign everything to keep standards as a separate map
+	// better for testing
+	p.textAliases = make(map[string]TextAlias)
+	for k, v := range standards {
+		p.textAliases[k] = v
+	}
 }

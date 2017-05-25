@@ -102,7 +102,6 @@ func TestAliasingTextAliasValue(t *testing.T) {
 	p, errs := PrototypeString(`
         alias x = string
         name : x`)
-	fmt.Println(errs)
 	_, ok := p.textAliases["x"]
 	assertNow(t, ok, "alias is nil")
 	assertNow(t, errs == nil, "errs should be nil")
@@ -119,6 +118,8 @@ func TestAliasingDoubleIndirection(t *testing.T) {
 		len(p.textAliases), 1+len(standards)))
 	assert(t, errs == nil, "errs must be nil")
 	assertNow(t, p.fields["name"] != nil, "name is nil")
+	assertNow(t, len(p.fields["name"].types) == 1, "wrong type length")
+	assertNow(t, p.fields["name"].types[0].value != nil, "regex is nil")
 	assertNow(t, p.fields["name"].types[0].value.String() == standards["string"].value, "wrong value")
 }
 
@@ -137,7 +138,7 @@ func TestAliasingDuplicateElementAlias(t *testing.T) {
 	assert(t, errs != nil, "there should be an error")
 }
 
-func TestAliasingDuplicateMixedlias(t *testing.T) {
+func TestAliasingDuplicateMixedAlias(t *testing.T) {
 	_, errs := PrototypeString(`alias y = name{} alias y = 10`)
 	assert(t, errs != nil, "there should be an error")
 }

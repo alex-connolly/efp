@@ -8,6 +8,7 @@ type lexer struct {
 	tokens    []token
 	numTokens int
 	length    int
+	errors    []string
 }
 
 // processes the next token.
@@ -15,6 +16,7 @@ func (l *lexer) next() {
 	if l.isEOF() {
 		return
 	}
+	found := false
 	for _, pt := range getProtoTokens() {
 		if pt.identifier(l.buffer[l.offset]) {
 			//fmt.Printf("offset: %d\n", l.offset)
@@ -25,8 +27,16 @@ func (l *lexer) next() {
 			} else {
 				l.offset++
 			}
+			found = true
 			break
 		}
+	}
+	if !found {
+		if l.errors == nil {
+			l.errors = make([]string, 0)
+		}
+		l.errors = append(l.errors, errUnrecognisedToken)
+		l.offset++
 	}
 	l.next()
 }

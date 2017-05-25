@@ -132,6 +132,7 @@ func TestPrototypeFieldRegexMinimumBounds(t *testing.T) {
 
 func TestPrototypeFieldRegexMaximumBounds(t *testing.T) {
 	p, errs := PrototypeString(`<"[a-z]+":2> : string`)
+	fmt.Println(errs)
 	assert(t, errs == nil, "errs should be nil")
 	assertNow(t, p.fields != nil, "r shouldn't be nil")
 	assertNow(t, len(p.fields) == 1, "wrong field length")

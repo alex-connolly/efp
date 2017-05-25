@@ -205,3 +205,20 @@ func TestIsDiscoveredAlias(t *testing.T) {
 	p := createPrototypeParserString("hello")
 	assert(t, isDiscoveredAlias(p), "discovered alias failed")
 }
+
+func TestMixedAliases(t *testing.T) {
+	p := createPrototypeParserString(`alias x = 5`)
+	assert(t, isTextAlias(p), "not solo text alias")
+	p = createPrototypeParserString(`alias y = name : string`)
+	assert(t, isFieldAlias(p), "not solo field alias")
+	p = createPrototypeParserString(`alias x = 5 alias y = name : string`)
+	assert(t, p.current().tkntype == tknValue, "not a value token")
+	assert(t, isTextAlias(p), "not text alias")
+	parseTextAlias(p)
+	assert(t, p.current().tkntype == tknValue, "not a value token")
+	assert(t, p.lexer.tokenString(p.current()) == "alias", "should be alias")
+	assert(t, isFieldAlias(p), "not field alias")
+	p.next()
+	val := p.lexer.tokenString(p.current())
+	assert(t, val == "y", fmt.Sprintf("value token should be y, was %s\n", val))
+}

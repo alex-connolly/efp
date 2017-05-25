@@ -18,16 +18,22 @@ type parser struct {
 }
 
 func (p *parser) run() {
-	//fmt.Printf("tokens: %d, %d\n", len(p.lexer.tokens), p.lexer.tokens[5].tkntype)
+	if p.index >= len(p.lexer.tokens) {
+		return
+	}
+	found := false
 	for _, c := range p.constructs {
 		if c.is(p) {
 			c.process(p)
+			found = true
 			break
 		}
 	}
-	if p.index < len(p.lexer.tokens) {
-		p.run()
+	if !found {
+		p.addError(errUnrecognisedConstruct)
+		p.next()
 	}
+	p.run()
 }
 
 // A construct is a repeated pattern within an efp file
@@ -158,7 +164,6 @@ func (p *parser) addValueChild(fv *Value, regex string) {
 }
 
 func (p *parser) findTextAlias(alias string) *TextAlias {
-	fmt.Println("here lads")
 	current := p.prototype
 	for current != nil {
 		for t, x := range current.textAliases {
@@ -204,7 +209,7 @@ func (p *parser) parseTypeDeclaration(t []*TypeDeclaration) []*TypeDeclaration {
 		t = append(t, td)
 		break
 	case tknValue:
-		fmt.Println("found alias")
+
 		alias := p.lexer.tokenString(p.next())
 		td := new(TypeDeclaration)
 		td.value = p.evaluateAlias(alias)
@@ -312,11 +317,39 @@ func createPrototypeParser(bytes []byte) *parser {
 	p.index = 0
 	p.importPrototypeConstructs()
 	p.lexer = lex(bytes)
+	// add all errors (possible to improve process in future)
+	if p.lexer.errors != nil && len(p.lexer.errors) > 0 {
+		// MUST leave this condition in --> 0 errors should be nil, not an empty array
+		p.errs = make([]string, 0)
+		for _, err := range p.lexer.errors {
+			p.errs = append(p.errs, err)
+		}
+	}
 	p.prototype = new(ProtoElement)
 	p.prototype.key = new(Key)
 	p.prototype.key.key = parentKey
 	p.prototype.addStandardAliases()
 	return p
+}
+
+func (p *parser) isAliasAvailable(alias string) bool {
+	if p.prototype.textAliases != nil {
+		_, found := p.prototype.textAliases[alias]
+		if found {
+			return false
+		}
+	}
+	if p.prototype.fieldAliases != nil {
+		if p.prototype.fieldAliases[alias] != nil {
+			return false
+		}
+	}
+	if p.prototype.elementAliases != nil {
+		if p.prototype.elementAliases[alias] != nil {
+			return false
+		}
+	}
+	return true
 }
 
 func createPrototypeParserString(data string) *parser {
@@ -464,7 +497,7 @@ func (p *parser) addFieldAlias(alias string, f *ProtoField) {
 	if p.prototype.fieldAliases == nil {
 		p.prototype.fieldAliases = make(map[string]*ProtoField)
 	}
-	if p.prototype.fieldAliases[alias] != nil {
+	if !p.isAliasAvailable(alias) {
 		p.addError(fmt.Sprintf(errDuplicateAlias, alias, p.prototype.key.key))
 	} else {
 		p.prototype.fieldAliases[alias] = f
@@ -475,7 +508,7 @@ func (p *parser) addElementAlias(alias string, e *ProtoElement) {
 	if p.prototype.elementAliases == nil {
 		p.prototype.elementAliases = make(map[string]*ProtoElement)
 	}
-	if p.prototype.elementAliases[alias] != nil {
+	if !p.isAliasAvailable(alias) {
 		p.addError(fmt.Sprintf(errDuplicateAlias, alias, p.prototype.key.key))
 	} else {
 		p.prototype.elementAliases[alias] = e
@@ -531,14 +564,11 @@ func parseTextAlias(p *parser) {
 	p.next() // eat =
 	next := p.next()
 	value := p.lexer.tokenString(next)
-	fmt.Printf("found value: %s\n", value)
 	p.addTextAlias(alias, TextAlias{value, next.tkntype == tknValue})
 }
 
 func (p *parser) addTextAlias(alias string, ta TextAlias) {
-	fmt.Println("here")
-	_, ok := p.prototype.textAliases[alias]
-	if !ok {
+	if p.isAliasAvailable(alias) {
 		p.prototype.textAliases[alias] = ta
 	} else {
 		p.addError(errDuplicateAlias)
