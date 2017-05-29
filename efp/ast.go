@@ -95,6 +95,11 @@ func (f *ProtoElement) Field(name string) *ProtoField {
 	return f.fields[name]
 }
 
+// Element ...
+func (f *ProtoElement) Element(name string) *ProtoElement {
+	return f.elements[name]
+}
+
 // Types ...
 func (f *ProtoField) Types(indices ...int) []*TypeDeclaration {
 	current := f.types
@@ -128,6 +133,16 @@ func (f *Field) Values(indices ...int) []*Value {
 // Element ...
 func (e *Element) Element(name string, index int) *Element {
 	return e.elements[name][index]
+}
+
+// Elements ...
+func (e *Element) Elements(name string) []*Element {
+	return e.elements[name]
+}
+
+// Fields ...
+func (e *Element) Fields(name string) []*Field {
+	return e.fields[name]
 }
 
 // Field ...

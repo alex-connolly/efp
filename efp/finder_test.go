@@ -116,7 +116,6 @@ func TestIsElementAlias(t *testing.T) {
 }
 
 func TestIsField(t *testing.T) {
-
 	p := createPrototypeParserString("name = 6")
 	assert(t, isField(p), "int field failed")
 	p = createPrototypeParserString(`name = "www"`)

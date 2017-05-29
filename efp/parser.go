@@ -49,10 +49,6 @@ func (p *parser) peek(offset int) token {
 	return p.lexer.tokens[offset]
 }
 
-func isValue(t tokenType) bool {
-	return (t == tknValue) || (t == tknNumber) || (t == tknString)
-}
-
 func (p *parser) validateKey(key string) string {
 	for k, v := range p.prototype.fields {
 		if k == key {
@@ -118,18 +114,15 @@ func (p *parser) parseValue(fv []*Value) []*Value {
 }
 
 func (p *parser) parseArrayDeclaration(fv []*Value) []*Value {
-	fmt.Println("parsing array")
 	current := new(Value)
 	p.next() // eat [
 	for p.current().tkntype != tknCloseSquare {
 		switch p.current().tkntype {
 		case tknString, tknValue, tknNumber:
 			value := p.lexer.tokenString(p.next())
-			fmt.Printf("adding child: %s\n", value)
 			p.addValueChild(current, value)
 			break
 		case tknOpenSquare:
-			fmt.Println("new child array")
 			if current.values == nil {
 				current.values = make([]*Value, 0)
 			}
@@ -145,21 +138,7 @@ func (p *parser) parseArrayDeclaration(fv []*Value) []*Value {
 	}
 	fv = append(fv, current)
 	p.next() // eat ]
-	fmt.Println("ending array")
 	return fv
-}
-
-func (p *parser) addTypeChild(t *TypeDeclaration, regex string) {
-	if t.types == nil {
-		t.types = make([]*TypeDeclaration, 0)
-	}
-	td := new(TypeDeclaration)
-	r, err := regexp.Compile(regex)
-	if err == nil {
-		p.addError(errInvalidRegex)
-	}
-	td.value = r
-	t.types = append(t.types, td)
 }
 
 func (p *parser) addValueChild(fv *Value, data string) {
@@ -294,6 +273,9 @@ func parseElement(p *parser) {
 	p.parseParameters(e)
 	p.enforceNext(tknOpenBrace, "Expected '{'") // eat {
 	p.addElement(e.key.key, e)
+	e.parent = p.scope
+	p.prototype = p.prototype.Element(e.key.key)
+	p.scope = e
 }
 
 func parseFieldAlias(p *parser) {
@@ -384,107 +366,67 @@ func createPrototypeParserString(data string) *parser {
 }
 
 func (p *parser) parseKeyMaximum(k *Key) {
-	p.next() // eat :
-	switch p.current().tkntype {
-	case tknValue:
-		a := p.findTextAlias(p.lexer.tokenString(p.next()))
-		i, err := strconv.Atoi(a.value)
-		if err != nil {
-			p.addError(errInvalidLimitAlias)
+	if p.current().tkntype == tknColon {
+		p.next() // eat :
+		switch p.current().tkntype {
+		case tknValue:
+			a := p.findTextAlias(p.lexer.tokenString(p.next()))
+			i, err := strconv.Atoi(a.value)
+			if err != nil {
+				p.addError(errInvalidLimitAlias)
+			}
+			k.max = i
+		case tknNumber:
+			k.max, _ = strconv.Atoi(p.lexer.tokenString(p.next()))
 		}
-		k.max = i
-	case tknNumber:
-		k.max, _ = strconv.Atoi(p.lexer.tokenString(p.next()))
 	}
 }
 
 func (p *parser) parseKeyMinimum(k *Key) {
-	if p.current().tkntype == tknValue {
-		a := p.findTextAlias(p.lexer.tokenString(p.next()))
-		if a == nil {
-			// do someting
-			return
-		}
-		i, err := strconv.Atoi(a.value)
-		if err != nil {
-			p.addError(errInvalidLimitAlias)
-		} else {
-			k.min = i
+	if p.lexer.tokens[p.index+1].tkntype == tknColon {
+		if p.current().tkntype == tknValue {
+			a := p.findTextAlias(p.lexer.tokenString(p.next()))
+			if a == nil {
+				// do someting
+				return
+			}
+			i, err := strconv.Atoi(a.value)
+			if err != nil {
+				p.addError(errInvalidLimitAlias)
+			} else {
+				k.min = i
+				p.next() // eat :
+			}
+		} else if p.current().tkntype == tknNumber {
+			k.min, _ = strconv.Atoi(p.lexer.tokenString(p.next()))
+			p.next() // eat :
 		}
 
-	} else {
-		k.min, _ = strconv.Atoi(p.lexer.tokenString(p.next()))
 	}
-	p.next() // eat :
 }
 
-func (p *parser) parseKey(k *Key) {
+func (p *parser) parseKeyText(k *Key) {
 	switch p.current().tkntype {
-	case tknValue:
-		k.key = p.lexer.tokenString(p.next())
-		break
 	case tknString:
 		k.key = strval(p.lexer.tokenString(p.next()))
 		p.parseKeyRegex(k)
-		break
-	case tknOpenCorner:
-		p.next() // eat <
-		switch p.current().tkntype {
-		case tknNumber:
-			p.parseKeyMinimum(k)
-			switch p.current().tkntype {
-			case tknValue:
-				k.key = p.lexer.tokenString(p.next())
-				switch p.current().tkntype {
-				case tknColon:
-					p.parseKeyMaximum(k)
-					break
-				case tknCloseCorner:
-					break
-				}
-				break
-			case tknString:
-				k.key = strval(p.lexer.tokenString(p.next()))
-				p.parseKeyRegex(k)
-				switch p.current().tkntype {
-				case tknColon:
-					p.parseKeyMaximum(k)
-					break
-				}
-				break
-			default:
-				//fmt.Printf("wrong token type: %d at index %d\n", p.current().tkntype, p.index)
-				break
-			}
+	case tknValue:
+		k.key = p.lexer.tokenString(p.next())
+		//default:
+		//fmt.Printf("wrong token: %d\n", p.current().tkntype)
+	}
+	//fmt.Printf("parsed key: %s\n", k.key)
+}
 
-		case tknValue:
-			if p.lexer.tokens[p.index+1].tkntype == tknColon {
-				p.parseKeyMinimum(k)
-			}
-			switch p.current().tkntype {
-			case tknString:
-				k.key = strval(p.lexer.tokenString(p.next()))
-				p.parseKeyRegex(k)
-			case tknValue:
-				k.key = p.lexer.tokenString(p.next())
-			}
-			switch p.current().tkntype {
-			case tknColon:
-				p.parseKeyMaximum(k)
-			}
-			break
-		case tknString:
-			k.key = strval(p.lexer.tokenString(p.next()))
-			p.parseKeyRegex(k)
-			switch p.current().tkntype {
-			case tknColon:
-				p.parseKeyMaximum(k)
-				break
-			}
-			break
-		}
-		p.enforceNext(tknCloseCorner, "Open corner in field key must be closed.") // eat >
-		break
+func (p *parser) parseKey(k *Key) {
+	if p.current().tkntype == tknOpenCorner {
+		p.next()             // eat <
+		p.parseKeyMinimum(k) // can handle it being optional
+		p.parseKeyText(k)
+		p.parseKeyMaximum(k) // can handle it being optional
+		p.next()             // eat >
+	} else {
+		p.parseKeyText(k)
 	}
 }
 
@@ -592,13 +534,20 @@ func (p *parser) addField(key string, f *Field) {
 }
 
 func (p *parser) validateCompleteElement() {
-	for k, v := range p.prototype.fields {
-		if v.key.min > len(p.scope.fields[k]) {
-			p.addError(fmt.Sprintf(errInsufficientFields, v.key.min, k, p.scope.key.key, len(p.scope.fields[k])))
-		} else if v.key.max < len(p.scope.fields[k]) {
-			p.addError(fmt.Sprintf(errDuplicateField, v.key.max, k, p.scope.key.key, len(p.scope.fields[k])))
+	//	fmt.Println("VALIDATING")
+	if p.scope != nil {
+		for k, v := range p.prototype.fields {
+			//fmt.Printf("key: %s\n", k)
+			if v.key.min > len(p.scope.fields[k]) {
+				//fmt.Println("MIN")
+				p.addError(fmt.Sprintf(errInsufficientFields, v.key.min, k, p.scope.key.key, len(p.scope.fields[k])))
+			} else if v.key.max < len(p.scope.fields[k]) {
+				//fmt.Println("MAX")
+				p.addError(fmt.Sprintf(errDuplicateField, v.key.max, k, p.scope.key.key, len(p.scope.fields[k])))
+			}
 		}
 	}
+
 }
 
 func parseElementClosure(p *parser) {
@@ -635,19 +584,6 @@ func (p *parser) importValidateConstructs() {
 	}
 }
 
-func parsePrototypeFieldAlias(p *parser) {
-	f := new(ProtoField)
-	p.enforceNext(tknValue, "Expected alias keyword") // eat the alias keyword (kw not verified)
-	alias := p.lexer.tokenString(p.next())
-	p.enforceNext(tknAssign, "Expected '='")
-	f.key = new(Key)
-	p.parseKey(f.key)
-	p.enforceNext(tknAssign, "Expected ':'") // eat =
-	f.types = make([]*TypeDeclaration, 0)
-	f.types = p.parseTypeDeclaration(f.types)
-	p.addFieldAlias(alias, f)
-}
-
 func (p *parser) current() token {
 	return p.lexer.tokens[p.index]
 }
@@ -669,17 +605,12 @@ func (p *parser) enforceNext(tokType tokenType, err string) token {
 
 func (p *parser) parseParameters(e *Element) {
 	// handle case where no parameters
-	if p.current().tkntype != tknOpenBrace {
+	if p.current().tkntype != tknOpenBracket {
 		return
 	}
 	p.next() // eat "("
-	for p.current().tkntype != tknCloseBrace {
-		if p.current().tkntype == tknValue {
-
-		} else {
-
-		}
-	}
+	//	e.parameters = make([]*Value, 0)
+	//e.parameters = p.parseValue(e.parameters)
 	p.next() // eat ")"'
 }
 
@@ -768,9 +699,11 @@ func strval(data string) string {
 }
 
 func (p *parser) validateField(key string, f *Field) bool {
-
+	//fmt.Printf("in scope %s\n", p.scope.key.key)
 	prototype := p.prototype.fields[key]
-
+	if prototype == nil {
+		return false
+	}
 	for _, v := range f.values {
 		matched := false
 		for _, t := range prototype.types {

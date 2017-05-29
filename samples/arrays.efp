@@ -6,3 +6,13 @@ arrays {
     three : [2:data:2]
     four : [data]
 }
+
+divisions {
+    "Mississippi" {
+
+    }
+
+    "Alabama" {
+    
+    }
+}

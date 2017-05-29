@@ -13,7 +13,7 @@ const (
 	tknOpenBrace
 	tknCloseBrace
 	tknOpenSquare
-	tknCloseSquare
+	tknCloseSquare // 10
 	tknOpenBracket
 	tknCloseBracket
 	tknOpenCorner

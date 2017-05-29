@@ -389,3 +389,36 @@ func TestParseArrayFieldTwoDimensionalDisjunctionArrays(t *testing.T) {
 	assert(t, errs == nil, "errs should be nil")
 	assert(t, e != nil, "e should not be nil")
 }
+
+func TestParseFieldAlias(t *testing.T) {
+	p, errs := PrototypeString(`alias x = name : string   x  `)
+	assert(t, errs == nil, "errs should be nil")
+	assert(t, p.Field("name").TypeValue(0) == standards["string"].value, "wrong value")
+}
+
+func TestParseElement(t *testing.T) {
+	p, errs := PrototypeString(`name {
+			name : string
+		}`)
+	assertNow(t, errs == nil, "errs should be nil")
+	assertNow(t, len(p.Element("name").fields) == 1, "wrong pfield length")
+	assertNow(t, p.Element("name").Field("name") != nil, "field is nil")
+	e, errs := p.ValidateString(`name {
+		name = "ender"
+	}`)
+	assert(t, errs == nil, "errs should be nil")
+	assertNow(t, e != nil, "e should not be nil")
+	assertNow(t, e.Element("name", 0).Field("name", 0) != nil, "shouldn't be nil")
+	assertNow(t, e.Element("name", 0).Field("name", 0).Value(0) == "ender", "wrong value")
+}
+
+/*func TestParseElementParameters(t *testing.T) {
+	p, errs := PrototypeString(`name(string, string, int) {
+			name : string
+		}`)
+	e, errs := p.ValidateString(`name("hi", "i'm", 16){ name = "ender" }`)
+	assert(t, errs == nil, "errs should be nil")
+	assertNow(t, e != nil, "e should not be nil")
+	assertNow(t, e.Element("name", 0).parameters[2].value == "16", "wrong parameter value")
+	assertNow(t, e.Element("name", 0).Field("name", 0).Value() == "ender", "wrong value")
+}*/
