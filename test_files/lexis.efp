@@ -1,0 +1,8 @@
+name : string
+publisher : string
+topic : string
+
+<1:question> {
+    ask : string
+    regex : string
+}
