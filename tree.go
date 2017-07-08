@@ -91,13 +91,13 @@ func (f *ProtoField) TypeValue(indices ...int) string {
 }
 
 // Field ...
-func (f *ProtoElement) Field(name string) *ProtoField {
-	return f.fields[name]
+func (e *ProtoElement) Field(name string) *ProtoField {
+	return e.fields[name]
 }
 
 // Element ...
-func (f *ProtoElement) Element(name string) *ProtoElement {
-	return f.elements[name]
+func (e *ProtoElement) Element(name string) *ProtoElement {
+	return e.elements[name]
 }
 
 // Types ...
@@ -128,6 +128,21 @@ func (f *Field) Values(indices ...int) []*Value {
 		current = current[indices[i]].values
 	}
 	return current
+}
+
+// Value ...
+func (v *Value) Value() string {
+	return v.value
+}
+
+// Parameter ...
+func (e *Element) Parameter(index int) *Value {
+	return e.parameters[index]
+}
+
+// Parameters ...
+func (e *Element) Parameters() []*Value {
+	return e.parameters
 }
 
 // Element ...

@@ -1,9 +1,6 @@
 package efp
 
-import (
-	"fmt"
-	"testing"
-)
+import "testing"
 
 func TestParseSimpleFieldValid(t *testing.T) {
 	p, _ := PrototypeString("name : string")
@@ -372,7 +369,6 @@ func TestParseArrayFieldTwoDimensionalDisjunction(t *testing.T) {
 	p, errs := PrototypeString("name : [2:[2:string|int:2]:2]")
 	assert(t, errs == nil, "errs should be nil")
 	e, errs := p.ValidateString(`name = [["ender", "me"], ["me", "ender"]]`)
-	fmt.Println(errs)
 	assert(t, len(e.Field("name", 0).Values(0)) == 2, "wrong length 0")
 	assert(t, len(e.Field("name", 0).Values(0, 0)) == 2, "wrong length 0 0")
 	assert(t, errs == nil, "errs should be nil")
@@ -384,7 +380,6 @@ func TestParseArrayFieldTwoDimensionalDisjunctionArrays(t *testing.T) {
 	p, errs := PrototypeString("name : [2:[2:string:2]|[2:int:2]:2]")
 	assert(t, errs == nil, "errs should be nil")
 	e, errs := p.ValidateString(`name = [["ender", "me"], ["me", "ender"]]`)
-	fmt.Println(errs)
 	assert(t, len(e.Field("name", 0).Values(0, 0)) == 2, "wrong array length")
 	assert(t, errs == nil, "errs should be nil")
 	assert(t, e != nil, "e should not be nil")
@@ -412,13 +407,16 @@ func TestParseElement(t *testing.T) {
 	assertNow(t, e.Element("name", 0).Field("name", 0).Value(0) == "ender", "wrong value")
 }
 
-/*func TestParseElementParameters(t *testing.T) {
+func TestParseElementParameters(t *testing.T) {
 	p, errs := PrototypeString(`name(string, string, int) {
 			name : string
 		}`)
 	e, errs := p.ValidateString(`name("hi", "i'm", 16){ name = "ender" }`)
 	assert(t, errs == nil, "errs should be nil")
 	assertNow(t, e != nil, "e should not be nil")
-	assertNow(t, e.Element("name", 0).parameters[2].value == "16", "wrong parameter value")
-	assertNow(t, e.Element("name", 0).Field("name", 0).Value() == "ender", "wrong value")
-}*/
+	assertNow(t, e.Element("name", 0) != nil, "element is nil")
+	assertNow(t, e.Element("name", 0).Parameters() != nil, "parameters are nil")
+	assertNow(t, e.Element("name", 0).Parameter(2).Value() == "16", "wrong parameter value")
+	assertNow(t, e.Element("name", 0).Field("name", 0) != nil, "Field is nil")
+	assertNow(t, e.Element("name", 0).Field("name", 0).Value(0) == "ender", "wrong value")
+}

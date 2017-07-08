@@ -141,7 +141,6 @@ func TestPrototypeFieldRegexMaximumBounds(t *testing.T) {
 	assert(t, errs == nil, "errs should be nil")
 	assertNow(t, p.fields != nil, "r shouldn't be nil")
 	assertNow(t, len(p.fields) == 1, "wrong field length")
-	fmt.Println("HELLO")
 	assertNow(t, len(p.Field("[a-z]+").types) == 1, fmt.Sprintf("r wrong length (%d)", len(p.fields["[a-z]+"].types)))
 	p, errs = PrototypeString(`alias MAX = 2 <"[a-z]+":MAX> : string`)
 	assert(t, errs == nil, "errs should be nil")

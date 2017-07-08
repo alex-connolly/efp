@@ -609,8 +609,16 @@ func (p *parser) parseParameters(e *Element) {
 		return
 	}
 	p.next() // eat "("
-	//	e.parameters = make([]*Value, 0)
-	//e.parameters = p.parseValue(e.parameters)
+	// short circuit if no parameters
+	if p.current().tkntype == tknCloseBracket {
+		return
+	}
+	e.parameters = make([]*Value, 0)
+	e.parameters = p.parseValue(e.parameters)
+	for p.current().tkntype == tknComma {
+		p.next()
+		e.parameters = p.parseValue(e.parameters)
+	}
 	p.next() // eat ")"'
 }
 
