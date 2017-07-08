@@ -415,3 +415,36 @@ olympics {
     }
 }
 ```
+
+## Accessing Results
+
+The following interfaces are provided:
+
+```go
+// assuming e is parsed element
+
+// returns the first field with name = name
+e.Field("name", 0)
+e.FirstField("name")
+
+// returns the first element with name = name
+e.Element("element", 0)
+e.FirstElement("element")
+
+// getting the value of a field with name = name
+e.Field("name", 0).Value(0)
+// now let's say that name was an array of strings
+e.Field("name", 0).Values()
+// and we wanted the third element
+e.Field("name", 0).Value(2)
+// what about a 2D array?
+// get the parent
+e.Field("name", 0).Values()
+// get the second array
+e.Field("name", 0).Values(1)
+// get the third element of the third array
+e.Field("name", 0).Value(2, 2)
+
+
+// NOTE: values are returned as strings or string arrays : convert them yourself!
+```

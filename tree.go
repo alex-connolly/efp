@@ -111,6 +111,12 @@ func (f *ProtoField) Types(indices ...int) []*TypeDeclaration {
 
 // Value ...
 func (f *Field) Value(indices ...int) string {
+
+	// Value() shouldn't actually be called (makes no sense), but will be:
+	if len(indices) == 0 {
+		return f.Value(0)
+	}
+
 	current := f.values
 	for i := 0; i < len(indices)-1; i++ {
 		if current == nil {
@@ -145,6 +151,11 @@ func (e *Element) Parameters() []*Value {
 	return e.parameters
 }
 
+// FirstElement ...
+func (e *Element) FirstElement(name string) *Element {
+	return e.elements[name][0]
+}
+
 // Element ...
 func (e *Element) Element(name string, index int) *Element {
 	return e.elements[name][index]
@@ -163,6 +174,11 @@ func (e *Element) Fields(name string) []*Field {
 // Field ...
 func (e *Element) Field(name string, index int) *Field {
 	return e.fields[name][index]
+}
+
+// FirstField ...
+func (e *Element) FirstField(name string) *Field {
+	return e.fields[name][0]
 }
 
 func (e *ProtoElement) addStandardAliases() {
