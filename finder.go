@@ -131,7 +131,7 @@ func isElementClosure(p *parser) bool {
 }
 
 // must be run last to exclude other possibilities
-func isTextAlias(p *parser) bool {
+func isValueAlias(p *parser) bool {
 	// any other alias will fit in this category
 	return isAlias(p) && realDistance(p, tknAssign, 1) == 2
 }

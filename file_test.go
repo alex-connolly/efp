@@ -32,3 +32,9 @@ func TestLargeFiles(t *testing.T) {
 	assertNow(t, p != nil, "p should not be nil")
 	//e, errs := p.ValidateFiles("")
 }
+
+func TestVMGenFile(t *testing.T) {
+	p, errs := PrototypeFile(testFile("vm.efp"))
+	assert(t, errs == nil, "errs should be nil")
+	assertNow(t, p != nil, "p should not be nil")
+}

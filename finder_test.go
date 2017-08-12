@@ -189,37 +189,13 @@ func TestIsDistant(t *testing.T) {
 }
 
 func TestIsTextAlias(t *testing.T) {
-	p := createPrototypeParserString("alias x = 5")
-	assert(t, isTextAlias(p), "int text alias failed")
-	p = createPrototypeParserString(`alias x = hi`)
-	assert(t, isTextAlias(p), "id text alias failed")
+	p := createPrototypeParserString(`alias x = hi`)
+	assert(t, isValueAlias(p), "id text alias failed")
 	p = createPrototypeParserString(`alias x = "5"`)
-	assert(t, isTextAlias(p), "string text alias failed")
-}
-
-func TestIsAlias(t *testing.T) {
-	p := createPrototypeParserString("alias x =")
-	assert(t, isAlias(p), "not an alias")
+	assert(t, isValueAlias(p), "string text alias failed")
 }
 
 func TestIsDiscoveredAlias(t *testing.T) {
 	p := createPrototypeParserString("hello")
 	assert(t, isDiscoveredAlias(p), "discovered alias failed")
-}
-
-func TestMixedAliases(t *testing.T) {
-	p := createPrototypeParserString(`alias x = 5`)
-	assert(t, isTextAlias(p), "not solo text alias")
-	p = createPrototypeParserString(`alias y = name : string`)
-	assert(t, isFieldAlias(p), "not solo field alias")
-	p = createPrototypeParserString(`alias x = 5 alias y = name : string`)
-	assert(t, p.current().tkntype == tknValue, "not a value token")
-	assert(t, isTextAlias(p), "not text alias")
-	parseTextAlias(p)
-	assert(t, p.current().tkntype == tknValue, "not a value token")
-	assert(t, p.lexer.tokenString(p.current()) == "alias", "should be alias")
-	assert(t, isFieldAlias(p), "not field alias")
-	p.next()
-	val := p.lexer.tokenString(p.current())
-	assert(t, val == "y", fmt.Sprintf("value token should be y, was %s\n", val))
 }

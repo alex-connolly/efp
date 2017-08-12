@@ -388,7 +388,7 @@ func TestParseArrayFieldTwoDimensionalDisjunctionArrays(t *testing.T) {
 func TestParseFieldAlias(t *testing.T) {
 	p, errs := PrototypeString(`alias x = name : string   x  `)
 	assert(t, errs == nil, "errs should be nil")
-	assert(t, p.Field("name").TypeValue(0) == standards["string"].value, "wrong value")
+	assert(t, p.Field("name").TypeValue(0) == standards["string"], "wrong value")
 }
 
 func TestParseElement(t *testing.T) {

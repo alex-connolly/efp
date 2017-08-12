@@ -27,10 +27,11 @@ const (
 	errRequiredArray       = "Array type required."
 )
 
-var standards = map[string]TextAlias{
-	"string": TextAlias{`^\"(.*)\"$`, false},
-	"int":    TextAlias{`^([-]?[1-9]\d*|0)$`, false},
-	"float":  TextAlias{"^(([-]?[1-9][0-9]*)|([-]?[0-9]+.[0-9]+)|0)$", false},
-	"bool":   TextAlias{"^(true|false)$", false},
-	"uint":   TextAlias{`^([1-9]\d*|0)$`, false},
+var standards = map[string]string{
+	"string":     `^\"(.*)\"$`,
+	"int":        `^([-]?[1-9]\d*|0)$`,
+	"float":      "^(([-]?[1-9][0-9]*)|([-]?[0-9]+.[0-9]+)|0)$",
+	"bool":       "^(true|false)$",
+	"uint":       `^([1-9]\d*|0)$`,
+	"identifier": "[a-z][0-9]_+",
 }

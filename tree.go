@@ -49,12 +49,12 @@ type ProtoElement struct {
 	elements       map[string]*ProtoElement
 	elementAliases map[string]*ProtoElement
 	aliases        []string
-	textAliases    map[string]TextAlias // leave as token for recursion
+	valueAliases   map[string]ValueAlias // leave as token for recursion
 }
 
-// TextAlias ...
-type TextAlias struct {
-	value       string
+// ValueAlias ...
+type ValueAlias struct {
+	values      []*TypeDeclaration
 	isRecursive bool
 }
 
@@ -179,13 +179,4 @@ func (e *Element) Field(name string, index int) *Field {
 // FirstField ...
 func (e *Element) FirstField(name string) *Field {
 	return e.fields[name][0]
-}
-
-func (e *ProtoElement) addStandardAliases() {
-	// reassign everything to keep standards as a separate map
-	// better for testing
-	e.textAliases = make(map[string]TextAlias)
-	for k, v := range standards {
-		e.textAliases[k] = v
-	}
 }

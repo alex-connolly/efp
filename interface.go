@@ -42,7 +42,6 @@ func (e *ProtoElement) ValidateBytes(bytes []byte) (*Element, []string) {
 	p.importValidateConstructs()
 	p.lexer = lex(bytes)
 	p.prototype = e
-
 	p.scope = new(Element)
 	p.scope.key = new(Key)
 	p.scope.key.key = "parent"
