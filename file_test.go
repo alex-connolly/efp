@@ -61,7 +61,10 @@ func TestVMGenFile(t *testing.T) {
 	goutil.Assert(t, errs == nil, "errs should be nil")
 	goutil.AssertNow(t, e != nil, "e should not be nil")
 	goutil.Assert(t, len(e.Elements("instruction")) == 3, "wrong instruction length")
-	goutil.Assert(t, e.Element("instruction", 0).Parameter(0).value == "ADD",
+	goutil.Assert(t, e.FirstField("name").Value(0) == "Example",
 		fmt.Sprintf("wrong param value %s, expected %s\n",
-			e.Element("instruction", 0).Parameter(0).value, "ADD"))
+			e.FirstField("name").Value(0), "Example"))
+	goutil.Assert(t, e.FirstElement("instruction").Parameter(0).Value() == "ADD",
+		fmt.Sprintf("wrong param value %s, expected %s\n",
+			e.FirstElement("instruction").Parameter(0).Value(), "ADD"))
 }

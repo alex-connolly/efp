@@ -111,7 +111,6 @@ func (f *ProtoField) Types(indices ...int) []*TypeDeclaration {
 
 // Value ...
 func (f *Field) Value(indices ...int) string {
-
 	// Value() shouldn't actually be called (makes no sense), but will be:
 	if len(indices) == 0 {
 		return f.Value(0)
@@ -138,7 +137,7 @@ func (f *Field) Values(indices ...int) []*Value {
 
 // Value ...
 func (v *Value) Value() string {
-	return v.value
+	return strval(v.value)
 }
 
 // Parameter ...

@@ -1,7 +1,6 @@
 package efp
 
 import (
-	"log"
 	"testing"
 
 	"github.com/end-r/goutil"
@@ -31,7 +30,6 @@ func TestLexisFile(t *testing.T) {
         }
 
         `)
-	log.Println(errs)
 	goutil.AssertNow(t, errs == nil, "errs must be nil")
 
 	goutil.Assert(t, e.Field("name", 0).Value(0) == "Example", "failed name test")
