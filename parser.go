@@ -104,9 +104,15 @@ func (p *parser) parseValue(fv []*Value) []*Value {
 	case tknOpenSquare:
 		fv = p.parseArrayDeclaration(fv)
 		break
-	case tknNumber, tknString, tknValue:
+	case tknNumber, tknValue:
 		v := new(Value)
+		//v.value = strval(p.lexer.tokenString(p.next()))
 		v.value = p.lexer.tokenString(p.next())
+		fv = append(fv, v)
+		break
+	case tknString:
+		v := new(Value)
+		v.value = strval(p.lexer.tokenString(p.next()))
 		fv = append(fv, v)
 		break
 	}

@@ -1,18 +1,22 @@
 package efp
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/end-r/goutil"
+)
 
 func TestOnlyOperator(t *testing.T) {
 	_, errs := PrototypeString("=")
-	assert(t, errs != nil, "should be an error")
+	goutil.Assert(t, errs != nil, "should be an error")
 }
 
 func TestStrayOperator(t *testing.T) {
 	_, errs := PrototypeString("name :+ string")
-	assert(t, errs != nil, "should be an error")
+	goutil.Assert(t, errs != nil, "should be an error")
 }
 
 func TestInvisibleAlias(t *testing.T) {
 	_, errs := PrototypeString("name : boolean")
-	assert(t, errs != nil, "should be an error")
+	goutil.Assert(t, errs != nil, "should be an error")
 }

@@ -1,15 +1,16 @@
 package efp
 
 import (
-	"io/ioutil"
+	"log"
 	"testing"
+
+	"github.com/end-r/goutil"
 )
 
 func TestLexisFile(t *testing.T) {
-	bytes, _ := ioutil.ReadFile("test_files/lexis.efp")
-	p, errs := PrototypeBytes(bytes)
-	assert(t, errs == nil, "errs must be nil")
-	assertNow(t, p != nil, "prototype must not be nil")
+	p, errs := PrototypeFile("test_files/lexis.efp")
+	goutil.Assert(t, errs == nil, "errs must be nil")
+	goutil.AssertNow(t, p != nil, "prototype must not be nil")
 	e, errs := p.ValidateString(`
         name = "Example"
         publisher = "LexisTextUs"
@@ -30,10 +31,12 @@ func TestLexisFile(t *testing.T) {
         }
 
         `)
-	assertNow(t, errs == nil, "errs must be nil")
-	assert(t, e.Field("name", 0).Value(0) == "Example", "failed name test")
-	assert(t, e.Field("publisher", 0).Value(0) == "LexisTextUs", "failed publisher test")
-	assert(t, e.Field("topic", 0).Value(0) == "Immigration", "failed topic test")
-	assert(t, len(e.Elements("question")) == 3, "wrong question length")
+	log.Println(errs)
+	goutil.AssertNow(t, errs == nil, "errs must be nil")
+
+	goutil.Assert(t, e.Field("name", 0).Value(0) == "Example", "failed name test")
+	goutil.Assert(t, e.Field("publisher", 0).Value(0) == "LexisTextUs", "failed publisher test")
+	goutil.Assert(t, e.Field("topic", 0).Value(0) == "Immigration", "failed topic test")
+	goutil.Assert(t, len(e.Elements("question")) == 3, "wrong question length")
 
 }
