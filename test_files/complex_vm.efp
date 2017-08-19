@@ -1,0 +1,18 @@
+name : string
+author : string
+
+alias IDOrInt = identifier|int
+alias hex = "[0-9][A-F]+"
+
+alias instructionsAllowed = instruction(string, hex){
+    description : string
+    validate : int
+    fuel : int
+}
+
+instructionsAllowed
+
+category(string){
+    description : string
+    instructionsAllowed
+}

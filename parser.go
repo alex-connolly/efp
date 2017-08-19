@@ -235,6 +235,7 @@ func (p *parser) parsePrototypeArrayDeclaration(t []*TypeDeclaration) []*TypeDec
 }
 
 func parseElement(p *parser) {
+
 	e := new(Element)
 	e.key = new(Key)
 	p.parseKey(e.key)
@@ -242,8 +243,14 @@ func parseElement(p *parser) {
 	p.enforceNext(tknOpenBrace, "Expected '{'") // eat {
 	p.addElement(e.key.key, e)
 	e.parent = p.scope
-	p.prototype = p.prototype.Element(e.key.key)
-	p.scope = e
+	f := p.prototype
+	p.prototype = p.prototype.elements[e.key.key]
+	if p.prototype == nil {
+		p.addError("Invalid element here")
+	} else {
+		p.prototype.parent = f
+		p.scope = e
+	}
 }
 
 func parseFieldAlias(p *parser) {
@@ -496,17 +503,20 @@ func (p *parser) addField(key string, f *Field) {
 }
 
 func (p *parser) validateCompleteElement() {
-	//	fmt.Println("VALIDATING")
 	if p.scope != nil {
-		for k, v := range p.prototype.fields {
-			//fmt.Printf("key: %s\n", k)
-			if v.key.min > len(p.scope.fields[k]) {
-				//fmt.Println("MIN")
-				p.addError(fmt.Sprintf(errInsufficientFields, v.key.min, k, p.scope.key.key, len(p.scope.fields[k])))
-			} else if v.key.max < len(p.scope.fields[k]) {
-				//fmt.Println("MAX")
-				p.addError(fmt.Sprintf(errDuplicateField, v.key.max, k, p.scope.key.key, len(p.scope.fields[k])))
+		if p.prototype != nil {
+			for k, v := range p.prototype.fields {
+				fmt.Printf("hi %s\n", k)
+				if v.key.min > len(p.scope.fields[k]) {
+					fmt.Println("MIN")
+					p.addError(fmt.Sprintf(errInsufficientFields, v.key.min, k, p.scope.key.key, len(p.scope.fields[k])))
+				} else if v.key.max < len(p.scope.fields[k]) {
+					fmt.Println("MAX")
+					p.addError(fmt.Sprintf(errDuplicateField, v.key.max, k, p.scope.key.key, len(p.scope.fields[k])))
+				}
 			}
+		} else {
+			p.addError("No prototype discovered at this level.")
 		}
 	}
 }
@@ -639,12 +649,10 @@ func (p *parser) validateType(validType *TypeDeclaration, fv *Value) bool {
 				}
 			}
 		} else {
-
-			// should never use below condition?
+			/* should never use below condition?
 			if validType.value == nil {
 				return false
-			}
-
+			}*/
 			return validType.value.MatchString(fv.value)
 		}
 	} else {
