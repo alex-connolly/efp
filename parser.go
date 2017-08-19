@@ -506,12 +506,9 @@ func (p *parser) validateCompleteElement() {
 	if p.scope != nil {
 		if p.prototype != nil {
 			for k, v := range p.prototype.fields {
-				fmt.Printf("hi %s\n", k)
 				if v.key.min > len(p.scope.fields[k]) {
-					fmt.Println("MIN")
 					p.addError(fmt.Sprintf(errInsufficientFields, v.key.min, k, p.scope.key.key, len(p.scope.fields[k])))
 				} else if v.key.max < len(p.scope.fields[k]) {
-					fmt.Println("MAX")
 					p.addError(fmt.Sprintf(errDuplicateField, v.key.max, k, p.scope.key.key, len(p.scope.fields[k])))
 				}
 			}
